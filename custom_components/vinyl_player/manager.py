@@ -14,6 +14,7 @@ from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import STATE_PAUSED, STATE_PLAYING
 from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import (
@@ -109,6 +110,8 @@ class VinylManager:
         self._seen_playing = False
         self._stop_requested = False
         self._sync_task: asyncio.Task | None = None
+        self._player_override: dict[str, str] | None = None
+        self._grace_until: datetime | None = None
 
     # ------------------------------------------------------------------ setup
     @property
@@ -117,7 +120,20 @@ class VinylManager:
 
     @property
     def player(self) -> str:
+        """The speaker in use: picked in the panel, else the one from the options."""
+        override = self._player_override
+        if override and override.get("base") == self.options[CONF_PLAYER]:
+            return override["entity_id"]
         return self.options[CONF_PLAYER]
+
+    def players(self) -> list[str]:
+        """All Music Assistant media players."""
+        registry = er.async_get(self.hass)
+        return sorted(
+            e.entity_id
+            for e in registry.entities.values()
+            if e.platform == MUSIC_ASSISTANT_DOMAIN and e.domain == "media_player" and not e.disabled
+        )
 
     @property
     def runout_mode(self) -> str:
@@ -133,6 +149,7 @@ class VinylManager:
     async def async_setup(self) -> None:
         stored = await self._store.async_load() or {}
         self.tracklists = stored.get("tracklists", {})
+        self._player_override = stored.get("player")
         self.match_report = stored.get("match_report", {})
         self.match_report.pop("running", None)
         await self.async_load_export()
@@ -178,7 +195,11 @@ class VinylManager:
     @callback
     def _save(self) -> None:
         self._store.async_delay_save(
-            lambda: {"tracklists": self.tracklists, "match_report": self.match_report},
+            lambda: {
+                "tracklists": self.tracklists,
+                "match_report": self.match_report,
+                "player": self._player_override,
+            },
             2,
         )
 
@@ -416,6 +437,37 @@ class VinylManager:
         )
         return self.public_release(release)
 
+    async def async_set_player(self, entity_id: str) -> None:
+        """Switch speakers. A record that is spinning moves along (MA queue transfer)."""
+        if entity_id not in self.players():
+            raise ServiceValidationError(f"{entity_id} is not a Music Assistant player")
+        old = self.player
+        if entity_id == old:
+            return
+        moving = self.session.get("phase") == PHASE_PLAYING
+        self._player_override = {"entity_id": entity_id, "base": self.options[CONF_PLAYER]}
+        self._save()
+        self._track_player()
+        self._grace_until = dt_util.utcnow() + _START_GRACE
+        if moving:
+            try:
+                await self.hass.services.async_call(
+                    MUSIC_ASSISTANT_DOMAIN,
+                    "transfer_queue",
+                    {"entity_id": entity_id, "source_player": old, "auto_play": True},
+                    blocking=True,
+                )
+            except HomeAssistantError as err:
+                _LOGGER.warning("Moving the record to %s failed: %s", entity_id, err)
+                raise
+        async_dispatcher_send(self.hass, SIGNAL_STATE)
+
+    async def async_resume(self) -> None:
+        """Lower the needle again after a pause."""
+        await self.hass.services.async_call(
+            "media_player", "media_play", {"entity_id": self.player}, blocking=True
+        )
+
     async def async_stop(self) -> None:
         self._stop_requested = True
         self._cancel_timers()
@@ -470,6 +522,8 @@ class VinylManager:
         if new.state == STATE_PAUSED or self._stop_requested:
             return
         if not self._seen_playing or dt_util.utcnow() - started < _START_GRACE:
+            return
+        if self._grace_until and dt_util.utcnow() < self._grace_until:  # speaker switch
             return
         left_at = dt_util.utcnow()
         if self._pending_check:

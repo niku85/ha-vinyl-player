@@ -58,6 +58,8 @@ def async_register_websocket(hass: HomeAssistant) -> None:
         ws_set_override,
         ws_set_hidden,
         ws_check_matches,
+        ws_set_player,
+        ws_resume,
     ):
         websocket_api.async_register_command(hass, command)
 
@@ -73,6 +75,7 @@ def _info(hass: HomeAssistant) -> dict[str, Any]:
         "version": VERSION,
         "username": manager.entry.data.get("username"),
         "player": manager.player,
+        "players": manager.players(),
         "runout_mode": manager.runout_mode,
         "runout_sound": f"{STATIC_URL}/{RUNOUT_SOUND_FILE}",
         "webhook_id": webhook_id,
@@ -265,4 +268,22 @@ async def ws_set_hidden(hass, connection, msg):
 async def ws_check_matches(hass, connection, msg):
     """Start the Music Assistant match check; progress arrives via subscribe."""
     _manager(hass).start_match_check()
+    connection.send_result(msg["id"])
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/set_player", vol.Required("entity_id"): str}
+)
+@websocket_api.async_response
+@_wrap
+async def ws_set_player(hass, connection, msg):
+    await _manager(hass).async_set_player(msg["entity_id"])
+    connection.send_result(msg["id"])
+
+
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/resume"})
+@websocket_api.async_response
+@_wrap
+async def ws_resume(hass, connection, msg):
+    await _manager(hass).async_resume()
     connection.send_result(msg["id"])

@@ -80,8 +80,14 @@ async def setup(hass: HomeAssistant, tmp_path):
         "music_assistant", "search", search, supports_response=SupportsResponse.ONLY
     )
 
-    for svc in ("shuffle_set", "repeat_set", "media_stop", "volume_set", "play_media"):
+    hass.services.async_register("music_assistant", "transfer_queue", record)
+    for svc in ("shuffle_set", "repeat_set", "media_stop", "volume_set", "play_media", "media_play"):
         hass.services.async_register("media_player", svc, record)
+    from homeassistant.helpers import entity_registry as er
+
+    reg = er.async_get(hass)
+    reg.async_get_or_create("media_player", "music_assistant", "lr", suggested_object_id="living_room")
+    reg.async_get_or_create("media_player", "music_assistant", "kt", suggested_object_id="kitchen")
     hass.states.async_set(PLAYER, "idle")
 
     entry = MockConfigEntry(
@@ -292,3 +298,25 @@ async def test_check_matches(hass: HomeAssistant, setup) -> None:
     assert result["checked"] == 2  # hidden records are skipped
     assert [m["title"] for m in result["misses"]] == ["Moon Safari"]
     assert result["misses"][0]["best"]["uri"] == "apple_music://album/9"
+
+
+async def test_switch_speaker_moves_the_record(hass: HomeAssistant, setup) -> None:
+    entry, calls = setup
+    manager = entry.runtime_data
+    assert manager.players() == ["media_player.kitchen", PLAYER]
+    await manager.async_play(1)
+    await manager.async_set_player("media_player.kitchen")
+    assert manager.player == "media_player.kitchen"
+    move = [c for c in calls if c.service == "transfer_queue"][0]
+    assert move.data["entity_id"] == "media_player.kitchen" and move.data["source_player"] == PLAYER
+    # the old speaker going idle no longer ends the session
+    hass.states.async_set(PLAYER, "idle")
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.vinyl_player_turntable").state == "playing"
+    await manager.async_resume()
+    assert [c for c in calls if c.service == "media_play"][0].data["entity_id"] == "media_player.kitchen"
+    import pytest as _pytest
+    from homeassistant.exceptions import ServiceValidationError
+
+    with _pytest.raises(ServiceValidationError):
+        await manager.async_set_player("media_player.not_ma")

@@ -96,6 +96,12 @@ To change the Discogs credentials, use *Reconfigure*.
 * **Pause** from anywhere else (HomePod, the MA app): the arm lifts and the platter coasts to a stop.
   Resuming spins it back up.
 * **Volume**: the fader on the right of the plinth.
+* **Speaker**: the speaker button above the fader lists every Music Assistant player. Pick one and a
+  record that's spinning moves over without restarting (Music Assistant queue transfer). The choice
+  is remembered, and the current speaker is shown under the track. The default speaker in
+  *Configure* is still the starting point.
+* **Pause** (from the HomePod or the MA app) lifts the arm. **START** then resumes where it paused,
+  instead of starting the album again.
 * ⚙ → *This album*: if Music Assistant picks the wrong version (e.g. a deluxe edition), set its
   `ma_query`: a Music Assistant URI such as `apple_music://album/1441164426`, or a better search text.
   You can also hide the record from the shelf there.
@@ -165,8 +171,9 @@ See **[docs/nfc-and-shortcuts.md](docs/nfc-and-shortcuts.md)**. In short:
 
 * **ESP32 reader:** an ESP32 with a PN532 running ESPHome sends `tag_scanned` to HA. Put it in a
   puck next to the real turntable: lay the record down and the music starts. A config is in the docs.
-* **Option A (no Shortcut):** write tags with the HA Companion app, then in the panel open
-  ⚙ → *NFC tags* → **Scan tag to link** and scan the tag. After that, touching the tag starts the record.
+* **Option A (no Shortcut):** open the panel in the HA app on your phone, swipe to the album, then
+  ⚙ → *NFC tags* → **Write tag** and hold the phone to a blank sticker. That writes and links it in
+  one go. For stickers that are already written, or an ESP32 reader, use **Scan tag to link**. After that, touching the tag starts the record.
 * **Option B (Apple Shortcut):** an iOS NFC automation runs the *Play Vinyl* shortcut. The shortcut
   POSTs `{"tag": "<name>"}` to the integration's webhook and opens the panel. The panel shows the
   exact webhook URL.

@@ -5,7 +5,7 @@
  * album through Music Assistant. No build step, no dependencies.
  */
 
-const VERSION = "0.3.0";
+const VERSION = "0.4.0";
 const DEG_PER_SEC = 200; // 33⅓ rpm
 const WINDOW = 7; // covers rendered on each side of the centre
 const ARM_SVG_H = 300; // tonearm SVG viewBox height
@@ -31,6 +31,8 @@ const ICONS = {
   gear: "M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z",
   search: "M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z",
   close: "M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z",
+  speaker: "M12,12A3,3 0 0,0 9,15A3,3 0 0,0 12,18A3,3 0 0,0 15,15A3,3 0 0,0 12,12M12,20A5,5 0 0,1 7,15A5,5 0 0,1 12,10A5,5 0 0,1 17,15A5,5 0 0,1 12,20M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8C10.89,8 10,7.1 10,6C10,4.89 10.89,4 12,4M17,2H7C5.89,2 5,2.89 5,4V20A2,2 0 0,0 7,22H17A2,2 0 0,0 19,20V4C19,2.89 18.1,2 17,2Z",
+  check: "M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z",
   vol: "M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z",
 };
 const icon = (name, size = 22) =>
@@ -67,7 +69,7 @@ const CSS = `
 }
 * { box-sizing: border-box; }
 button { font: inherit; color: inherit; }
-.app { position: relative; height: 100%; min-height: 100vh; min-height: 100dvh; display: grid;
+.app { position: relative; height: 100%; display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); background: var(--vp-bg); overflow: hidden; user-select: none; }
 .search input { min-width: 0; }
 header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; height: 56px; }
@@ -145,13 +147,15 @@ select.sort option { color: #000; }
 .arm.wobble .arm-inner { animation: wobble 1.8s ease-in-out infinite; }
 @keyframes wobble { 0%,100% { transform: rotate(0deg); } 50% { transform: rotate(-.7deg); } }
 .arm-svg { width: 100%; height: 100%; display: block; overflow: visible; }
-.startstop { position: absolute; left: 3.5%; bottom: 5%; width: 14%; aspect-ratio: 1.5; border-radius: 8px; border: 0; cursor: pointer;
+.startstop { position: absolute; left: 3%; bottom: 3%; width: 19%; aspect-ratio: 1; border-radius: 50%; border: 0; cursor: pointer; padding: 0;
   background: linear-gradient(#3b3b42, #26262b); box-shadow: 0 3px 0 #0e0e10, 0 5px 10px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.12);
-  color: var(--vp-dim); font-size: clamp(9px, 1.9cqw, 13px); font-weight: 700; letter-spacing: .14em; display: grid; place-items: center; }
+  color: var(--vp-dim); font-size: clamp(8px, 1.8cqw, 12px); font-weight: 700; letter-spacing: .12em;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
 .startstop:active { transform: translateY(2px); box-shadow: 0 1px 0 #0e0e10, 0 2px 4px rgba(0,0,0,.5); }
-.startstop .led { width: 6px; height: 6px; border-radius: 50%; background: #3a1a12; margin-top: 3px; box-shadow: inset 0 0 2px #000; }
+.startstop .led { width: 6px; height: 6px; border-radius: 50%; background: #3a1a12; box-shadow: inset 0 0 2px #000; }
 .startstop.on .led { background: var(--vp-accent2); box-shadow: 0 0 8px var(--vp-accent2); }
 .startstop:disabled { opacity: .45; cursor: default; }
+.startstop.on:disabled { opacity: 1; }
 .plinth { container-type: inline-size; }
 .badge { position: absolute; left: 3.5%; top: 5%; font-size: clamp(8px, 1.6cqw, 11px); letter-spacing: .3em; color: rgba(255,255,255,.28); font-weight: 700; }
 .strobe { position: absolute; width: 1.6%; aspect-ratio: 1; border-radius: 50%; background: #3a1a12; }
@@ -162,8 +166,21 @@ select.sort option { color: #000; }
 .fader .knob { position: absolute; left: -30%; width: 160%; height: 14%; margin-top: -7%; border-radius: 3px;
   background: linear-gradient(#5b5b63, #2b2b31 48%, #1a1a1e 52%, #3b3b42); box-shadow: 0 3px 6px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.2); }
 .fader .knob::after { content: ""; position: absolute; left: 15%; right: 15%; top: 50%; height: 1px; background: var(--vp-accent); }
-.fader-label { position: absolute; right: 3.5%; top: 27%; width: 6%; display: grid; place-items: center; color: rgba(255,255,255,.35); }
-.fader-label svg { width: 70%; height: auto; }
+.speaker-btn { position: absolute; right: 2%; top: 22%; width: 10%; aspect-ratio: 1; min-width: 32px; border: 0; border-radius: 50%; padding: 0;
+  display: grid; place-items: center; cursor: pointer; color: rgba(255,255,255,.55); background: rgba(255,255,255,.06); }
+.speaker-btn:hover, .speaker-btn.open { color: var(--vp-fg); background: rgba(255,255,255,.12); }
+.speaker-btn svg { width: 56%; height: auto; }
+.speakers { position: absolute; z-index: 25; min-width: 220px; max-width: min(320px, calc(100% - 24px)); max-height: 50%; overflow: auto;
+  background: var(--vp-panel); border: 1px solid var(--vp-line); border-radius: 14px; padding: 6px; box-shadow: 0 16px 40px rgba(0,0,0,.45); display: none; }
+.speakers.open { display: block; }
+.speakers h4 { margin: 6px 10px 6px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--vp-dim); }
+.speakers button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: none; border: 0; border-radius: 10px; padding: 10px; cursor: pointer; }
+.speakers button:hover { background: rgba(127,127,127,.12); }
+.speakers button .nm { flex: 1; min-width: 0; font-weight: 600; font-size: 14px; }
+.speakers button .st { display: block; font-weight: 400; font-size: 12px; color: var(--vp-dim); }
+.speakers button .ck { width: 18px; color: var(--vp-accent); }
+.now .where { color: var(--vp-dim); font-size: 11px; margin-top: 3px; display: inline-flex; gap: 4px; align-items: center; }
+.now .where svg { width: 12px; height: 12px; }
 .now { text-align: center; min-height: 40px; max-width: 640px; }
 .now .track { font-size: 15px; font-weight: 600; }
 .now .track .pos { color: var(--vp-accent); margin-right: 8px; font-variant-numeric: tabular-nums; }
@@ -204,6 +221,13 @@ select.sort option { color: #000; }
 .toast { position: absolute; left: 50%; bottom: 24px; transform: translate(-50%, 30px); opacity: 0; transition: .3s; z-index: 40;
   background: #2b2a31; border: 1px solid var(--vp-line); padding: 10px 16px; border-radius: 10px; max-width: calc(100% - 32px); box-shadow: 0 10px 30px rgba(0,0,0,.5); }
 .toast.show { transform: translate(-50%, 0); opacity: 1; }
+@media (max-aspect-ratio: 4/5) {
+  .app { grid-template-rows: auto auto minmax(0, 1fr); }
+  .flow { min-height: 0; }
+  .stage { flex: none; height: calc(min(44vw, 420px) * 1.36); }
+  .caption { min-height: 0; }
+  .deck { align-content: start; }
+}
 @media (max-height: 560px) and (orientation: landscape) {
   .app { grid-template-rows: auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr) auto; }
   header { grid-column: 1 / -1; }
@@ -280,8 +304,7 @@ select.sort option { color: #000; }
 :host([look="frame"]) .arm.lifted .arm-inner { filter: drop-shadow(6px 10px 4px rgba(20,20,20,.16)); }
 :host([look="frame"]) .strobe { background: rgba(20,20,20,.15); }
 :host([look="frame"]) .strobe.on { background: var(--vp-ink); box-shadow: none; }
-:host([look="frame"]) .startstop { width: auto; min-width: 18%; aspect-ratio: auto; padding: 0 16px; height: 13%; border-radius: 999px;
-  background: var(--vp-ink); color: #fff; box-shadow: none; display: inline-flex; gap: 8px; font-size: clamp(10px, 2.1cqw, 14px); letter-spacing: .1em; }
+:host([look="frame"]) .startstop { background: var(--vp-ink); color: #fff; box-shadow: none; }
 :host([look="frame"]) .startstop:active { transform: scale(.97); box-shadow: none; }
 :host([look="frame"]) .startstop .led { margin: 0; background: rgba(255,255,255,.3); box-shadow: none; }
 :host([look="frame"]) .startstop.on .led { background: #fff; box-shadow: 0 0 6px rgba(255,255,255,.9); }
@@ -289,7 +312,11 @@ select.sort option { color: #000; }
 :host([look="frame"]) .fader .fill { background: var(--vp-ink); opacity: 1; }
 :host([look="frame"]) .fader .knob { background: var(--vp-ink); border-radius: 999px; box-shadow: none; height: 11%; margin-top: -5.5%; }
 :host([look="frame"]) .fader .knob::after { background: var(--vp-card); }
-:host([look="frame"]) .fader-label { color: var(--vp-muted); }
+:host([look="frame"]) .speaker-btn { color: var(--vp-ink); background: rgba(20,20,20,.07); }
+:host([look="frame"]) .speaker-btn:hover, :host([look="frame"]) .speaker-btn.open { background: rgba(20,20,20,.14); }
+:host([look="frame"]) .speakers { box-shadow: 0 16px 40px rgba(20,20,20,.18); border: 0; border-radius: 20px; }
+:host([look="frame"]) .speakers button .ck { color: var(--vp-ink); }
+:host([look="frame"]) .now .where { font-size: 13px; margin-top: 10px; }
 
 /* settings sheet, toast, effects */
 :host([look="frame"]) .fx-sleeve { box-shadow: 0 16px 32px rgba(20,20,20,.22); border-radius: 4px; }
@@ -476,14 +503,15 @@ class VinylPlayerPanel extends HTMLElement {
             <div class="arm-base"></div>
             <div class="arm lifted"><div class="arm-inner">${TONEARM_SVG}</div></div>
             <button class="startstop" disabled><span class="ss-text">START</span><span class="led"></span></button>
-            <div class="fader-label">${icon("vol")}</div>
+            <button class="speaker-btn" title="Speaker" aria-label="Choose speaker">${icon("speaker")}</button>
             <div class="fader" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="100">
               <div class="track"></div><div class="fill"></div><div class="knob"></div>
             </div>
           </div>
-          <div class="now"><div class="now-label"></div><div class="track"></div><div class="sub"></div></div>
+          <div class="now"><div class="now-label"></div><div class="track"></div><div class="sub"></div><div class="where"></div></div>
         </section>
         <div class="fx"></div>
+        <div class="speakers" role="menu"></div>
         <div class="sheet">
           <div class="scrim"></div>
           <div class="body">
@@ -526,6 +554,16 @@ class VinylPlayerPanel extends HTMLElement {
     this._bindStage();
     this._bindFader();
     this.$(".startstop").addEventListener("click", () => this._startStop());
+    this.$(".speaker-btn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      this._toggleSpeakers();
+    });
+    this.shadowRoot.addEventListener("pointerdown", (e) => {
+      const menu = this.$(".speakers");
+      if (menu.classList.contains("open") && !e.composedPath().some((n) => n === menu || n === this.$(".speaker-btn"))) {
+        this._toggleSpeakers(false);
+      }
+    });
     this.$(".platter-wrap").addEventListener("click", () => this._putAway());
     this.$(".settings").addEventListener("click", () => this._openSheet());
     this.$(".sheet .scrim").addEventListener("click", () => this._closeSheet());
@@ -619,6 +657,37 @@ class VinylPlayerPanel extends HTMLElement {
       : `background-image:linear-gradient(135deg, hsl(${hue(r.id)} 45% 38%), hsl(${(hue(r.id) + 60) % 360} 55% 18%))`;
   }
 
+  /** Resolves once the browser has the image (cached for the session). */
+  _loadImage(url) {
+    this._imgCache = this._imgCache || new Map();
+    let p = this._imgCache.get(url);
+    if (!p) {
+      p = new Promise((resolve) => {
+        const img = new Image();
+        img.decoding = "async";
+        img.onload = img.onerror = () => resolve();
+        img.src = url;
+      });
+      this._imgCache.set(url, p);
+    }
+    return p;
+  }
+
+  /** Warm the cache so fast swipes don't show empty covers. */
+  _preload(ci) {
+    const n = this.list.length;
+    // thumbnails well ahead in both directions, full covers right around the centre
+    for (let d = 0; d <= 30; d++) {
+      for (const i of d ? [ci + d, ci - d] : [ci]) {
+        if (i < 0 || i >= n) continue;
+        const r = this.list[i];
+        const thumb = r.thumb || r.cover;
+        if (thumb) this._loadImage(thumb);
+        if (d <= 3 && r.cover) this._loadImage(r.cover);
+      }
+    }
+  }
+
   _makeItem(i) {
     const r = this.list[i];
     const el = document.createElement("div");
@@ -667,9 +736,12 @@ class VinylPlayerPanel extends HTMLElement {
         el._full = true;
         const r = this.list[i];
         if (r.cover && r.thumb && r.cover !== r.thumb) {
-          const full = this._coverStyle(r);
-          el.querySelector(".cover").setAttribute("style", full);
-          el.querySelector(".reflect").setAttribute("style", full);
+          this._loadImage(r.cover).then(() => {
+            if (!el.isConnected) return;
+            const full = this._coverStyle(r);
+            el.querySelector(".cover").setAttribute("style", full);
+            el.querySelector(".reflect").setAttribute("style", full);
+          });
         }
       }
     }
@@ -681,6 +753,7 @@ class VinylPlayerPanel extends HTMLElement {
       this.$(".caption .title").textContent = r?.title ?? "";
       this.$(".caption .meta").textContent = r ? [r.year, r.format].filter(Boolean).join(" · ") : "";
       this.$(".scrub").value = ci;
+      this._preload(ci);
       if (this.$(".sheet").classList.contains("open") && this._sheetTab === "album") this._renderSheet();
     }
   }
@@ -921,8 +994,21 @@ class VinylPlayerPanel extends HTMLElement {
     Object.assign(wrap.style, { width: `${D}px`, height: `${D}px`, left: `${C.x - D / 2}px`, top: `${C.y - D / 2}px` });
     const bs = H * 0.15;
     Object.assign(this.$(".arm-base").style, { width: `${bs}px`, height: `${bs}px`, left: `${P.x - bs / 2}px`, top: `${P.y - bs / 2}px` });
+    // Strobe lamp in the free top-right corner, well away from the buttons.
     const strobe = this.$(".strobe");
-    Object.assign(strobe.style, { left: `${C.x - D / 2 - W * 0.005}px`, top: `${C.y + D * 0.42}px` });
+    const ls = Math.max(6, H * 0.025);
+    Object.assign(strobe.style, { left: `${W * 0.965 - ls}px`, top: `${H * 0.055}px`, width: `${ls}px` });
+    // START/STOP: the biggest round button that fits the bottom-left corner
+    // without touching the record.
+    const R = (D / 2) * 0.97;
+    const m = H * 0.03;
+    let bsz = H * 0.22;
+    while (bsz > H * 0.1) {
+      const bc = { x: m + bsz / 2, y: H - m - bsz / 2 };
+      if (Math.hypot(bc.x - C.x, bc.y - C.y) - R >= bsz / 2 + H * 0.012) break;
+      bsz -= 1;
+    }
+    Object.assign(this.$(".startstop").style, { width: `${bsz}px`, height: `${bsz}px`, left: `${m}px`, bottom: `${m}px` });
 
     // tonearm SVG scaled so its pivot sits on P and the stylus is L away.
     const scale = L / ARM_LEN;
@@ -994,14 +1080,26 @@ class VinylPlayerPanel extends HTMLElement {
     this._kick();
   }
 
+  _isStarting() {
+    if (this._starting && Date.now() > this._starting) this._starting = 0;
+    return !!this._starting;
+  }
+
+  _isPaused() {
+    return !this._isStarting() && this.deck.mode === "playing" && this._playerState()?.state === "paused";
+  }
+
   _updateButton() {
     const b = this.$(".startstop");
+    if (!b) return;
     const d = this.deck;
-    const playing = d.mode === "playing" || d.mode === "runout";
+    const paused = this._isPaused();
+    // While a record is being put on, the button already reads STOP.
+    const playing = this._isStarting() || d.mode === "runout" || (d.mode === "playing" && !paused);
     b.disabled = d.busy || (!playing && d.releaseId == null && !this.list.length);
     b.classList.toggle("on", playing);
     b.querySelector(".ss-text").textContent = playing ? "STOP" : "START";
-    b.title = playing ? "Lift the tonearm and stop" : "Play the record in the centre";
+    b.title = playing ? "Lift the tonearm and stop" : paused ? "Resume" : "Play the record in the centre";
   }
 
   _progressAngle() {
@@ -1066,8 +1164,9 @@ class VinylPlayerPanel extends HTMLElement {
       : mode === "runout"
       ? "Run-out groove"
       : mode === "playing"
-      ? st?.state === "paused" ? "Paused" : "Now spinning"
+      ? this._isPaused() ? "Paused" : "Now spinning"
       : "Needle up";
+    this._updateWhere();
     if (!r) {
       trackEl.innerHTML = "";
       sub.textContent = this.list.length ? "Tap the record in the centre to put it on the turntable" : "";
@@ -1080,9 +1179,10 @@ class VinylPlayerPanel extends HTMLElement {
       const t = idx >= 0 ? tracks[idx] : null;
       const side = t?.position ? `<span class="pos">${esc(t.position)}</span>` : "";
       line = `${side}${esc(st.attributes.media_title || "…")}`;
-      if (st.state === "paused") line += ` <span class="muted">(paused)</span>`;
+      if (this._isPaused()) line += ` <span class="muted">(paused)</span>`;
     } else if (mode === "loaded") line = `<span class="muted">Needle up</span>`;
     trackEl.innerHTML = line;
+    this._updateWhere();
     sub.textContent = `${r.artist} — ${r.title}${r.year ? ` (${r.year})` : ""}`;
   }
 
@@ -1142,12 +1242,17 @@ class VinylPlayerPanel extends HTMLElement {
     }
     if (st !== this._lastPlayerState) {
       this._lastPlayerState = st;
-      this._lift(!(this.deck.mode === "playing" && st?.state === "playing") && this.deck.mode !== "runout");
-      if (this.deck.mode === "playing" && !this.deck.busy && st) {
+      if (st?.state === "playing") this._starting = 0;
+      const starting = this._isStarting();
+      if (!starting) {
+        this._lift(!(this.deck.mode === "playing" && st?.state === "playing") && this.deck.mode !== "runout");
+      }
+      if (this.deck.mode === "playing" && !this.deck.busy && st && !starting) {
         // paused → platter coasts to a stop; resumed → spins back up
         this._spin(st.state !== "paused");
       }
       this._updateNow();
+      this._updateButton();
       if (this.deck.mode === "playing") this._kick();
     }
   }
@@ -1254,6 +1359,12 @@ class VinylPlayerPanel extends HTMLElement {
     const d = this.deck;
     if (d.busy) return;
     this._unlockAudio();
+    if (this._isPaused()) {
+      this._lift(false);
+      this._spin(true);
+      this.ws("resume").catch((e) => this._toast(e.message));
+      return;
+    }
     if (d.mode === "playing" || d.mode === "runout") {
       this._wantId = null;
       this.ws("stop").catch((e) => this._toast(e.message));
@@ -1404,6 +1515,9 @@ class VinylPlayerPanel extends HTMLElement {
     }
     d.busy = true;
     this._wantId = id;
+    // "starting" lasts until Music Assistant reports playing (max 15 s), so a
+    // stale "paused"/"idle" state can't flash START or lift the arm meanwhile.
+    this._starting = Date.now() + 15000;
     this._updateButton();
     let playPromise = null;
     try {
@@ -1428,6 +1542,7 @@ class VinylPlayerPanel extends HTMLElement {
       if (playPromise) await playPromise;
     } catch (err) {
       this._toast(`Couldn't play: ${err.message || err}`);
+      this._starting = 0;
       d.busy = false;
       this._wantId = null;
       await this._needleUp();
@@ -1512,11 +1627,17 @@ class VinylPlayerPanel extends HTMLElement {
       const learning = i.state?.learning;
       root.innerHTML = `
         <h3>Link a tag to “${esc(center?.title ?? "—")}”</h3>
-        ${learning ? `<p class="pill">Waiting for a tag scan… hold your phone to the tag now.</p>
+        ${learning ? `<p class="pill">Waiting 90 s for a tag scan… scan a sticker that was written by the Home Assistant app (or lay it on the ESP32 reader).</p>
           <div class="row"><button class="btn" data-act="learn-cancel">Cancel</button></div>` : `
+        ${this._hass?.auth?.external?.config?.canWriteTag ? `
         <div class="row">
-          <button class="btn primary" data-act="learn" ${center ? "" : "disabled"}>Scan tag to link</button>
-          <span class="muted">uses the Home Assistant app's NFC tags</span>
+          <button class="btn primary" data-act="write" ${center ? "" : "disabled"}>Write tag</button>
+          <span class="muted">writes a blank NFC sticker for this album and links it</span>
+        </div>` : `
+        <p class="muted">To write a blank sticker, open this page in the Home Assistant app on your phone and use <b>Write tag</b>.</p>`}
+        <div class="row">
+          <button class="btn${this._hass?.auth?.external?.config?.canWriteTag ? "" : " primary"}" data-act="learn" ${center ? "" : "disabled"}>Scan tag to link</button>
+          <span class="muted">for stickers already written by the HA app, or an ESP32 reader</span>
         </div>
         <div class="row">
           <input class="field" id="tagid" placeholder="…or type a tag ID / Shortcut name, e.g. abbey-road">
@@ -1542,8 +1663,7 @@ class VinylPlayerPanel extends HTMLElement {
         <p class="muted">Keep this URL private – anyone who has it can start a record.</p>
         <h3>Option A – no Shortcut needed (recommended)</h3>
         <ol>
-          <li>In the Home Assistant iPhone app: Settings → Tags → <b>Write tag</b> (or Settings → Tags → + in the HA web UI).</li>
-          <li>Here: browse to the album, tap <b>NFC tags → Scan tag to link</b>, scan the tag.</li>
+          <li>Here: browse to the album, tap <b>NFC tags → Write tag</b>, and hold the iPhone to a blank sticker. That writes it and links it in one go.</li>
           <li>From now on touching the tag with your iPhone starts the record — the panel animates along.</li>
         </ol>
         <h3>Option B – Apple Shortcut</h3>
@@ -1576,6 +1696,79 @@ class VinylPlayerPanel extends HTMLElement {
     root.querySelectorAll("[data-act]").forEach((el) =>
       el.addEventListener("click", () => this._sheetAction(el.dataset.act, el.dataset, root))
     );
+  }
+
+  _speakerName(id) {
+    return this._hass?.states[id]?.attributes?.friendly_name || id || "";
+  }
+
+  _updateWhere() {
+    const el = this.$(".now .where");
+    if (!el) return;
+    const id = this.info?.player;
+    el.innerHTML = id ? `${icon("speaker", 12)}<span>${esc(this._speakerName(id))}</span>` : "";
+  }
+
+  _toggleSpeakers(open) {
+    const menu = this.$(".speakers");
+    const btn = this.$(".speaker-btn");
+    const show = open ?? !menu.classList.contains("open");
+    menu.classList.toggle("open", show);
+    btn.classList.toggle("open", show);
+    if (!show) return;
+    const players = this.info?.players || [];
+    const states = this._hass?.states || {};
+    const label = { playing: "Playing", paused: "Paused", idle: "Idle", off: "Off", unavailable: "Unavailable", on: "On" };
+    menu.innerHTML = `<h4>Play on</h4>${players
+      .map((id) => {
+        const st = states[id];
+        const cur = id === this.info.player;
+        const sub = st ? label[st.state] || st.state : "";
+        const what = st?.state === "playing" && st.attributes.media_title ? ` · ${st.attributes.media_title}` : "";
+        return `<button data-id="${esc(id)}" ${st?.state === "unavailable" ? "disabled" : ""}>
+          <span class="ck">${cur ? icon("check", 18) : ""}</span>
+          <span class="nm">${esc(this._speakerName(id))}<span class="st">${esc(sub + what)}</span></span></button>`;
+      })
+      .join("") || `<p class="muted" style="padding:0 10px">No Music Assistant players found.</p>`}`;
+    menu.querySelectorAll("button[data-id]").forEach((b) =>
+      b.addEventListener("click", async () => {
+        this._toggleSpeakers(false);
+        const id = b.dataset.id;
+        if (id === this.info.player) return;
+        try {
+          await this.ws("set_player", { entity_id: id });
+          this._toast(`Playing on ${this._speakerName(id)}`);
+        } catch (e) {
+          this._toast(e.message || String(e));
+        }
+      })
+    );
+    // place it next to the speaker button
+    const app = this.$(".app").getBoundingClientRect();
+    const r = btn.getBoundingClientRect();
+    const mw = Math.min(320, app.width - 24);
+    menu.style.left = `${Math.max(12, Math.min(r.right - app.left - mw, app.width - mw - 12))}px`;
+    menu.style.width = `${mw}px`;
+    const below = r.bottom - app.top + 8;
+    menu.style.top = "";
+    menu.style.bottom = "";
+    if (below + 260 < app.height) menu.style.top = `${below}px`;
+    else menu.style.bottom = `${app.bottom - r.top + 8}px`;
+  }
+
+  /** Write an HA tag onto a sticker with the iPhone/Android app and link it. */
+  async _writeTag(center) {
+    const ext = this._hass?.auth?.external;
+    const tagId = `vinyl-${center.id}`;
+    const name = `${center.artist} – ${center.title}`;
+    await this.ws("set_tag", { tag_id: tagId, release_id: center.id });
+    try {
+      await this._hass.callWS({ type: "tag/create", tag_id: tagId, name });
+    } catch (e) {
+      /* already exists, or not an admin – the tag still works */
+    }
+    ext.fireMessage({ type: "tag/write", payload: { name, tag: tagId } });
+    this._toast("Hold the top of your phone to the sticker");
   }
 
   _matchHTML(m) {
@@ -1618,7 +1811,8 @@ class VinylPlayerPanel extends HTMLElement {
       } else if (act === "hide") {
         await this.ws("set_hidden", { release_id: Number(data.id), hidden: true });
         this._toast("Hidden – set hidden: false in collection.json to bring it back");
-      } else if (act === "learn") await this.ws("learn_tag", { release_id: center.id });
+      } else if (act === "write") await this._writeTag(center);
+      else if (act === "learn") await this.ws("learn_tag", { release_id: center.id });
       else if (act === "learn-cancel") await this.ws("learn_tag", { release_id: null });
       else if (act === "add") {
         const tag = root.querySelector("#tagid").value.trim();

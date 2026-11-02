@@ -54,13 +54,16 @@ record on the reader. The tag's UID is stored as that record's `tag_id`.
 
 ## Option A: Home Assistant Companion app tags (recommended)
 
-1. **Write the tag:** in the HA iPhone app, go to *Settings → Companion App → … → Tags*, or in the HA
-   web UI to *Settings → Tags → + Add tag → Write*. Hold the iPhone to the sticker. The tag now
-   contains `https://www.home-assistant.io/tag/<uuid>`.
-2. **Link it to the album:** open **Vinyl Player**, swipe to the album, then ⚙ → **NFC tags** →
-   **Scan tag to link** and scan the tag. The next scan within 90 s is linked to the album in the
-   centre instead of playing anything.
-3. Done. Each scan fires HA's `tag_scanned` event, and the integration plays the linked record.
+1. Open **Vinyl Player** in the Home Assistant app on your iPhone (or Android), and swipe to the album.
+2. ⚙ → **NFC tags** → **Write tag**, then hold the top of the phone to a blank sticker. The app writes
+   `https://www.home-assistant.io/tag/vinyl-<release id>` to it. The tag is linked to the album and
+   shows up under *Settings → Tags* with the album's name.
+3. Done. Touching the sticker with the iPhone (even when it's locked) fires `tag_scanned`, and the
+   record starts.
+
+**Scan tag to link** is for stickers that are already written, such as tags you made earlier under
+*Settings → Tags*, or tags laid on the ESP32 reader. Press it, then scan the tag within 90 s. Note
+that an iPhone can't read a *blank* sticker, so write it first.
 
 Tags that aren't linked fire `vinyl_player_unknown_tag` with the `tag_id`, which you can use in your
 own automations.
