@@ -5,7 +5,7 @@
  * album through Music Assistant. No build step, no dependencies.
  */
 
-const VERSION = "0.2.0";
+const VERSION = "0.3.0";
 const DEG_PER_SEC = 200; // 33⅓ rpm
 const WINDOW = 7; // covers rendered on each side of the centre
 const ARM_SVG_H = 300; // tonearm SVG viewBox height
@@ -47,13 +47,13 @@ const TONEARM_SVG = `
       <stop offset="0" stop-color="#2a2a2e"/><stop offset=".5" stop-color="#6b6b72"/><stop offset="1" stop-color="#202024"/>
     </linearGradient>
   </defs>
-  <rect x="19" y="2" width="22" height="26" rx="4" fill="url(#vp-weight)"/>
-  <rect x="27" y="26" width="6" height="14" fill="url(#vp-chrome)"/>
-  <rect x="27.2" y="40" width="5.6" height="214" rx="2.8" fill="url(#vp-chrome)"/>
-  <path d="M27.4 250 L32.6 250 L37 262 L23 262 Z" fill="url(#vp-chrome)"/>
-  <rect x="21" y="260" width="18" height="18" rx="2" fill="#1d1d21" stroke="#555" stroke-width=".8"/>
-  <rect x="35" y="262" width="11" height="2.4" rx="1.2" fill="url(#vp-chrome)"/>
-  <circle cx="30" cy="276" r="1.6" fill="#d7b46a"/>
+  <rect class="weight" x="19" y="2" width="22" height="26" rx="4" fill="url(#vp-weight)"/>
+  <rect class="chrome" x="27" y="26" width="6" height="14" fill="url(#vp-chrome)"/>
+  <rect class="chrome" x="27.2" y="40" width="5.6" height="214" rx="2.8" fill="url(#vp-chrome)"/>
+  <path class="chrome" d="M27.4 250 L32.6 250 L37 262 L23 262 Z" fill="url(#vp-chrome)"/>
+  <rect class="head" x="21" y="260" width="18" height="18" rx="2" fill="#1d1d21" stroke="#555" stroke-width=".8"/>
+  <rect class="chrome" x="35" y="262" width="11" height="2.4" rx="1.2" fill="url(#vp-chrome)"/>
+  <circle class="stylus" cx="30" cy="276" r="1.6" fill="#d7b46a"/>
 </svg>`;
 
 const CSS = `
@@ -68,7 +68,8 @@ const CSS = `
 * { box-sizing: border-box; }
 button { font: inherit; color: inherit; }
 .app { position: relative; height: 100%; min-height: 100vh; min-height: 100dvh; display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto; background: var(--vp-bg); overflow: hidden; user-select: none; }
+  grid-template-rows: auto minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); background: var(--vp-bg); overflow: hidden; user-select: none; }
+.search input { min-width: 0; }
 header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; height: 56px; }
 header h1 { font-size: 18px; font-weight: 600; letter-spacing: .04em; margin: 0 8px 0 0; white-space: nowrap; }
 header h1 span { color: var(--vp-accent); }
@@ -213,6 +214,111 @@ select.sort option { color: #000; }
 :host([card]) .app { min-height: 0; }
 :host([card]) ha-menu-button { display: none !important; }
 :host([noheader]) header { display: none; }
+
+/* ================= look: frame – matches the Frame wall dashboard ================= */
+.frame-title, .now-label { display: none; }
+:host([look="frame"]) {
+  --vp-ink: var(--frame-ink, #141414); --vp-muted: var(--frame-muted, #76716A);
+  --vp-paper: var(--primary-background-color, #F1ECE4); --vp-card: var(--frame-panel, #F8F5F0);
+  --vp-deck: var(--secondary-background-color, #E8E1D6);
+  --vp-fg: var(--vp-ink); --vp-dim: var(--vp-muted); --vp-accent: var(--vp-ink); --vp-accent2: var(--vp-ink);
+  --vp-panel: var(--vp-card); --vp-line: rgba(20,20,20,.12);
+  --vp-display: var(--frame-font-display, Anton, Impact, sans-serif);
+  --vp-serif: var(--frame-font-serif, "Instrument Serif", Georgia, serif);
+  background: transparent; color: var(--vp-ink); border-radius: 0;
+  font-family: var(--primary-font-family, Inter, system-ui, sans-serif);
+}
+:host([look="frame"]) .app { background: transparent; gap: 18px; }
+:host([look="frame"]) header { height: auto; padding: 0 0 10px; border-bottom: 3px solid var(--vp-ink); gap: 10px; }
+:host([look="frame"]) header h1 { display: none; }
+:host([look="frame"]) .frame-title { display: flex; align-items: baseline; gap: 12px; margin: 0; white-space: nowrap;
+  font-size: 18px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+:host([look="frame"]) .frame-title .count { font-family: var(--vp-serif); font-size: 26px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--vp-muted); }
+:host([look="frame"]) .search { background: rgba(20,20,20,.07); border: 0; color: var(--vp-muted); padding: 8px 14px; }
+:host([look="frame"]) .search input { color: var(--vp-ink); font-size: 15px; }
+:host([look="frame"]) select.sort { background: rgba(20,20,20,.07); border: 0; color: var(--vp-ink); padding: 9px 14px; font-weight: 700; font-size: 14px; }
+:host([look="frame"]) .iconbtn { color: var(--vp-ink); background: rgba(20,20,20,.07); }
+:host([look="frame"]) .iconbtn:hover { background: rgba(20,20,20,.12); }
+
+:host([look="frame"]) .cover { border-radius: 4px; box-shadow: 0 14px 28px rgba(20,20,20,.18); background-color: var(--vp-deck); }
+:host([look="frame"]) .cover::after { background: linear-gradient(115deg, rgba(255,255,255,.10), transparent 40%); }
+:host([look="frame"]) .item .shade { background: var(--vp-paper); border-radius: 4px; }
+:host([look="frame"]) .reflect { opacity: .16; }
+:host([look="frame"]) .caption .artist { font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--vp-muted); }
+:host([look="frame"]) .caption .title { font-family: var(--vp-serif); font-weight: 400; font-size: 34px; line-height: 1.1; margin-top: 2px; }
+:host([look="frame"]) .caption .meta { font-size: 13px; color: var(--vp-muted); opacity: 1; }
+:host([look="frame"]) .scrub { accent-color: var(--vp-ink); opacity: .35; }
+:host([look="frame"]) .empty { color: var(--vp-muted); font-family: var(--vp-serif); font-size: 24px; }
+
+/* deck: "now spinning" panel next to a flat, light turntable */
+:host([look="frame"]) .deck { grid-template-columns: minmax(0, 1fr) auto; align-items: stretch; gap: 28px; padding: 0; justify-items: stretch; }
+:host([look="frame"]) .now { order: -1; max-width: none; text-align: left; background: var(--vp-card); border-radius: var(--ha-card-border-radius, 24px);
+  padding: 26px 28px; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+:host([look="frame"]) .now-label { display: block; font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--vp-muted); margin-bottom: 10px; }
+:host([look="frame"]) .now .track { font-size: 22px; font-weight: 700; line-height: 1.2; }
+:host([look="frame"]) .now .track .pos { display: block; font-family: var(--vp-display); font-weight: 400; font-size: clamp(56px, 9vh, 96px);
+  line-height: .85; color: var(--vp-ink); margin: 0 0 12px; }
+:host([look="frame"]) .now .track .muted { color: var(--vp-muted); }
+:host([look="frame"]) .now .sub { font-family: var(--vp-serif); font-size: 26px; line-height: 1.15; color: var(--vp-muted); margin-top: 6px; }
+:host([look="frame"]) .plinth { width: min(600px, 50vh, 52vw); align-self: center; border-radius: var(--ha-card-border-radius, 24px);
+  background: var(--vp-deck); box-shadow: none; }
+:host([look="frame"]) .plinth::before { display: none; }
+:host([look="frame"]) .badge { color: rgba(20,20,20,.35); }
+:host([look="frame"]) .platter { box-shadow: 0 2px 0 rgba(20,20,20,.08);
+  background: radial-gradient(circle, #1b1b1d 0 66%, #232224 66.5% 93%, transparent 93.2%),
+    repeating-conic-gradient(#9c958b 0 1.6deg, #d8d1c6 1.6deg 3.2deg); }
+:host([look="frame"]) .disc { box-shadow: 0 3px 10px rgba(20,20,20,.25), inset 0 0 0 1px rgba(255,255,255,.04); }
+:host([look="frame"]) .sheen { opacity: 0; }
+:host([look="frame"]) .sheen.on { opacity: .7; }
+:host([look="frame"]) .spindle { background: var(--vp-card); box-shadow: none; }
+:host([look="frame"]) .arm-base { background: radial-gradient(circle, var(--vp-card) 0 22%, var(--vp-ink) 23% 100%); box-shadow: none; }
+:host([look="frame"]) .arm-rest { background: var(--vp-ink); box-shadow: none; }
+:host([look="frame"]) .arm-svg .chrome { fill: var(--vp-card); stroke: var(--vp-ink); stroke-width: 1.1px; }
+:host([look="frame"]) .arm-svg .head, :host([look="frame"]) .arm-svg .weight { fill: var(--vp-ink); stroke: var(--vp-ink); }
+:host([look="frame"]) .arm-svg .stylus { fill: var(--vp-card); }
+:host([look="frame"]) .arm-inner { filter: drop-shadow(2px 3px 1px rgba(20,20,20,.18)); }
+:host([look="frame"]) .arm.lifted .arm-inner { filter: drop-shadow(6px 10px 4px rgba(20,20,20,.16)); }
+:host([look="frame"]) .strobe { background: rgba(20,20,20,.15); }
+:host([look="frame"]) .strobe.on { background: var(--vp-ink); box-shadow: none; }
+:host([look="frame"]) .startstop { width: auto; min-width: 18%; aspect-ratio: auto; padding: 0 16px; height: 13%; border-radius: 999px;
+  background: var(--vp-ink); color: #fff; box-shadow: none; display: inline-flex; gap: 8px; font-size: clamp(10px, 2.1cqw, 14px); letter-spacing: .1em; }
+:host([look="frame"]) .startstop:active { transform: scale(.97); box-shadow: none; }
+:host([look="frame"]) .startstop .led { margin: 0; background: rgba(255,255,255,.3); box-shadow: none; }
+:host([look="frame"]) .startstop.on .led { background: #fff; box-shadow: 0 0 6px rgba(255,255,255,.9); }
+:host([look="frame"]) .fader .track { background: rgba(20,20,20,.15); box-shadow: none; }
+:host([look="frame"]) .fader .fill { background: var(--vp-ink); opacity: 1; }
+:host([look="frame"]) .fader .knob { background: var(--vp-ink); border-radius: 999px; box-shadow: none; height: 11%; margin-top: -5.5%; }
+:host([look="frame"]) .fader .knob::after { background: var(--vp-card); }
+:host([look="frame"]) .fader-label { color: var(--vp-muted); }
+
+/* settings sheet, toast, effects */
+:host([look="frame"]) .fx-sleeve { box-shadow: 0 16px 32px rgba(20,20,20,.22); border-radius: 4px; }
+:host([look="frame"]) .sheet .scrim { background: rgba(20,20,20,.25); }
+:host([look="frame"]) .sheet .body { background: var(--vp-card); border-left: 0; border-radius: 28px 0 0 28px; backdrop-filter: none; -webkit-backdrop-filter: none; }
+:host([look="frame"]) .sheet .head h2 { font-size: 18px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+:host([look="frame"]) .tabs { border-bottom: 3px solid var(--vp-ink); margin: 0 16px; padding: 10px 0; }
+:host([look="frame"]) .tabs button { color: var(--vp-ink); font-weight: 700; }
+:host([look="frame"]) .tabs button.on { background: var(--vp-ink); color: #fff; }
+:host([look="frame"]) .content h3 { color: var(--vp-muted); font-weight: 800; letter-spacing: .12em; }
+:host([look="frame"]) .content code, :host([look="frame"]) .content .mono { background: rgba(20,20,20,.06); }
+:host([look="frame"]) .btn { background: rgba(20,20,20,.07); border: 0; border-radius: 999px; padding: 10px 18px; font-weight: 700; }
+:host([look="frame"]) .btn.primary { background: var(--vp-ink); color: #fff; }
+:host([look="frame"]) .field { background: #fff; border: 0; border-radius: 14px; padding: 10px 14px; color: var(--vp-ink); }
+:host([look="frame"]) .pill { background: rgba(20,20,20,.07); color: var(--vp-ink); font-weight: 700; }
+:host([look="frame"]) .toast { background: var(--vp-ink); color: #fff; border: 0; border-radius: 999px; padding: 12px 20px; box-shadow: none; }
+@media (max-width: 700px) {
+  :host([look="frame"]) .deck { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  :host([look="frame"]) .now { order: 1; padding: 16px 20px; }
+  :host([look="frame"]) .now-label { margin-bottom: 6px; }
+  :host([look="frame"]) .now .track { font-size: 18px; }
+  :host([look="frame"]) .now .track .pos { display: inline-block; font-size: 40px; margin: 0 12px 0 0; vertical-align: -6px; }
+  :host([look="frame"]) .now .sub { font-size: 20px; margin-top: 2px; }
+  :host([look="frame"]) .plinth { width: min(100%, 52vh); justify-self: center; }
+  :host([look="frame"]) .frame-title .count { display: none; }
+  :host([look="frame"]) .frame-title { font-size: 16px; }
+  :host([look="frame"]) .search { flex: 1 1 auto; padding: 8px 10px; }
+  :host([look="frame"]) select.sort { max-width: 104px; padding: 9px 8px; }
+}
 @media (prefers-reduced-motion: reduce) { .arm.wobble .arm-inner { animation: none; } }
 `;
 
@@ -343,6 +449,7 @@ class VinylPlayerPanel extends HTMLElement {
         <header>
           <ha-menu-button></ha-menu-button>
           <h1>Vinyl <span>Player</span></h1>
+          <h2 class="frame-title">Records <span class="count"></span></h2>
           <label class="search">${icon("search", 18)}<input type="search" placeholder="Search artist or album" aria-label="Search"></label>
           <select class="sort" aria-label="Sort">
             <option value="artist">Artist</option><option value="title">Album</option>
@@ -374,7 +481,7 @@ class VinylPlayerPanel extends HTMLElement {
               <div class="track"></div><div class="fill"></div><div class="knob"></div>
             </div>
           </div>
-          <div class="now"><div class="track"></div><div class="sub"></div></div>
+          <div class="now"><div class="now-label"></div><div class="track"></div><div class="sub"></div></div>
         </section>
         <div class="fx"></div>
         <div class="sheet">
@@ -463,6 +570,9 @@ class VinylPlayerPanel extends HTMLElement {
     this.items.clear();
     const scrub = this.$(".scrub");
     scrub.max = Math.max(0, list.length - 1);
+    this.$(".frame-title .count").textContent = this.query
+      ? `${list.length} of ${this.all.length}`
+      : `${this.all.length} on the shelf`;
     scrub.style.visibility = list.length > 12 ? "visible" : "hidden";
     this._renderFlow();
     this._renderEmpty();
@@ -948,14 +1058,22 @@ class VinylPlayerPanel extends HTMLElement {
     const r = this.deck.releaseId != null ? this.byId?.get(this.deck.releaseId) : null;
     const trackEl = this.$(".now .track");
     const sub = this.$(".now .sub");
+    const label = this.$(".now .now-label");
+    const mode = this.deck.mode;
+    const st = this._playerState();
+    label.textContent = !r
+      ? "Ready"
+      : mode === "runout"
+      ? "Run-out groove"
+      : mode === "playing"
+      ? st?.state === "paused" ? "Paused" : "Now spinning"
+      : "Needle up";
     if (!r) {
       trackEl.innerHTML = "";
       sub.textContent = this.list.length ? "Tap the record in the centre to put it on the turntable" : "";
       return;
     }
-    const st = this._playerState();
     const { idx, tracks } = this._currentTrack();
-    const mode = this.deck.mode;
     let line = "";
     if (mode === "runout") line = `<span class="pos">◌</span>Run-out groove`;
     else if (mode === "playing" && st) {
@@ -1554,11 +1672,15 @@ class VinylPlayerPanel extends HTMLElement {
  *         - type: custom:vinyl-player-card
  *           # height: 700px   # optional, default: fill the view
  *           # header: false   # hide search / sort / settings
+ *           # look: frame     # light paper style of the Frame wall dashboard
  */
 class VinylPlayerCard extends VinylPlayerPanel {
   setConfig(config) {
     this._config = config || {};
     this.setAttribute("card", "");
+    // look: dark (default) | frame – the light paper style of the Frame wall dashboard
+    if (this._config.look === "frame") this.setAttribute("look", "frame");
+    else this.removeAttribute("look");
     this.style.setProperty("--vp-card-height", this._config.height || "calc(100vh - var(--header-height, 56px))");
     this.toggleAttribute("noheader", this._config.header === false);
   }

@@ -79,8 +79,15 @@ To change the Discogs credentials, use *Reconfigure*.
         - type: custom:vinyl-player-card
           # height: 720px   # optional; default fills the view
           # header: false   # hide search / sort / settings
+          # look: frame     # light "Frame" style instead of the dark turntable
   ```
   The card is loaded automatically, so you don't need to add a resource.
+* **Two looks.** The default is the dark, glossy turntable, which the sidebar panel always uses.
+  `look: frame` on the card switches to the light paper style of the
+  [Frame wall dashboard](https://github.com/niku85/ha-frame-dashboard). It has a heading with a black
+  rule, a "Now spinning" panel with the side/track in Anton, and a flat, light turntable deck. It takes
+  its colours and fonts from the `frame` theme (`--frame-ink`, `--frame-panel`, `--frame-font-display`, …),
+  with sensible fallbacks without it.
 * **Swipe** or drag the covers, or use the scroll wheel or the ← → keys. The slider underneath jumps through big collections.
 * **Tap the centre cover** (or press Enter) to put the record on the turntable.
 * **STOP** lifts the arm and stops playback. **START** drops the needle on the same record again.
