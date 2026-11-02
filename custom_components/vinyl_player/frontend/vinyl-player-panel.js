@@ -5,7 +5,7 @@
  * album through Music Assistant. No build step, no dependencies.
  */
 
-const VERSION = "0.4.0";
+const VERSION = "0.5.0";
 const DEG_PER_SEC = 200; // 33⅓ rpm
 const WINDOW = 7; // covers rendered on each side of the centre
 const ARM_SVG_H = 300; // tonearm SVG viewBox height
@@ -112,7 +112,7 @@ select.sort option { color: #000; }
 
 /* ---------- turntable ---------- */
 .deck { display: grid; justify-items: center; padding: 6px 16px 14px; gap: 8px; }
-.plinth { position: relative; width: min(100%, 640px, 60vh); aspect-ratio: 1.45; border-radius: 18px;
+.plinth { position: relative; width: min(100%, 640px, 70vh); aspect-ratio: 1.25; border-radius: 18px;
   background: linear-gradient(160deg, #3a3940 0%, #232227 45%, #19181c 100%);
   box-shadow: 0 30px 60px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.12), inset 0 -2px 0 rgba(0,0,0,.6); }
 .plinth::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
@@ -147,29 +147,26 @@ select.sort option { color: #000; }
 .arm.wobble .arm-inner { animation: wobble 1.8s ease-in-out infinite; }
 @keyframes wobble { 0%,100% { transform: rotate(0deg); } 50% { transform: rotate(-.7deg); } }
 .arm-svg { width: 100%; height: 100%; display: block; overflow: visible; }
-.startstop { position: absolute; left: 3%; bottom: 3%; width: 19%; aspect-ratio: 1; border-radius: 50%; border: 0; cursor: pointer; padding: 0;
-  background: linear-gradient(#3b3b42, #26262b); box-shadow: 0 3px 0 #0e0e10, 0 5px 10px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.12);
-  color: var(--vp-dim); font-size: clamp(8px, 1.8cqw, 12px); font-weight: 700; letter-spacing: .12em;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
-.startstop:active { transform: translateY(2px); box-shadow: 0 1px 0 #0e0e10, 0 2px 4px rgba(0,0,0,.5); }
-.startstop .led { width: 6px; height: 6px; border-radius: 50%; background: #3a1a12; box-shadow: inset 0 0 2px #000; }
+.startstop { position: absolute; left: 3%; bottom: 4%; width: 15%; height: 10.5%; border: 0; border-radius: 4px; padding: 0; cursor: pointer;
+  background: linear-gradient(#48484f, #2c2c32 55%, #232328); color: #c7c3cc; white-space: nowrap;
+  box-shadow: 0 3px 0 #0a0a0c, 0 6px 12px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.45);
+  font: 700 clamp(7px, 1.9cqw, 12px)/1 Inter, system-ui, sans-serif; letter-spacing: .12em;
+  display: flex; align-items: center; justify-content: center; gap: 6px; }
+.startstop:active { transform: translateY(2px); box-shadow: 0 1px 0 #0a0a0c, 0 2px 4px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.12); }
+.startstop .led { width: 5px; height: 5px; border-radius: 50%; background: #3a1a12; box-shadow: inset 0 0 2px #000; }
 .startstop.on .led { background: var(--vp-accent2); box-shadow: 0 0 8px var(--vp-accent2); }
 .startstop:disabled { opacity: .45; cursor: default; }
 .startstop.on:disabled { opacity: 1; }
 .plinth { container-type: inline-size; }
-.badge { position: absolute; left: 3.5%; top: 5%; font-size: clamp(8px, 1.6cqw, 11px); letter-spacing: .3em; color: rgba(255,255,255,.28); font-weight: 700; }
+.badge { position: absolute; right: 11%; bottom: 4.5%; font-size: clamp(8px, 1.6cqw, 11px); letter-spacing: .3em; color: rgba(255,255,255,.28); font-weight: 700; }
 .strobe { position: absolute; width: 1.6%; aspect-ratio: 1; border-radius: 50%; background: #3a1a12; }
 .strobe.on { background: #ff3b1f; box-shadow: 0 0 10px #ff3b1f; }
-.fader { position: absolute; right: 3.5%; top: 36%; height: 54%; width: 6%; touch-action: none; cursor: ns-resize; outline: none; }
+.fader { position: absolute; right: 3.5%; top: 40%; height: 50%; width: 6%; touch-action: none; cursor: ns-resize; outline: none; }
 .fader .track { position: absolute; left: 50%; top: 0; bottom: 0; width: 4px; margin-left: -2px; border-radius: 2px; background: #0c0c0e; box-shadow: inset 0 1px 2px #000, 0 1px 0 rgba(255,255,255,.08); }
 .fader .fill { position: absolute; left: 50%; bottom: 0; width: 4px; margin-left: -2px; border-radius: 2px; background: var(--vp-accent); opacity: .7; }
 .fader .knob { position: absolute; left: -30%; width: 160%; height: 14%; margin-top: -7%; border-radius: 3px;
   background: linear-gradient(#5b5b63, #2b2b31 48%, #1a1a1e 52%, #3b3b42); box-shadow: 0 3px 6px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.2); }
 .fader .knob::after { content: ""; position: absolute; left: 15%; right: 15%; top: 50%; height: 1px; background: var(--vp-accent); }
-.speaker-btn { position: absolute; right: 2%; top: 22%; width: 10%; aspect-ratio: 1; min-width: 32px; border: 0; border-radius: 50%; padding: 0;
-  display: grid; place-items: center; cursor: pointer; color: rgba(255,255,255,.55); background: rgba(255,255,255,.06); }
-.speaker-btn:hover, .speaker-btn.open { color: var(--vp-fg); background: rgba(255,255,255,.12); }
-.speaker-btn svg { width: 56%; height: auto; }
 .speakers { position: absolute; z-index: 25; min-width: 220px; max-width: min(320px, calc(100% - 24px)); max-height: 50%; overflow: auto;
   background: var(--vp-panel); border: 1px solid var(--vp-line); border-radius: 14px; padding: 6px; box-shadow: 0 16px 40px rgba(0,0,0,.45); display: none; }
 .speakers.open { display: block; }
@@ -179,6 +176,34 @@ select.sort option { color: #000; }
 .speakers button .nm { flex: 1; min-width: 0; font-weight: 600; font-size: 14px; }
 .speakers button .st { display: block; font-weight: 400; font-size: 12px; color: var(--vp-dim); }
 .speakers button .ck { width: 18px; color: var(--vp-accent); }
+.sel { position: absolute; cursor: pointer; touch-action: manipulation; outline: none; z-index: 2; }
+/* warm light spilling onto the plinth around the knob (only while spinning) */
+.sel-glow { position: absolute; inset: -45%; border-radius: 50%; opacity: 0; transition: opacity .8s; pointer-events: none;
+  background: radial-gradient(circle, rgba(255,140,50,.28) 0 30%, rgba(255,140,50,.10) 48%, transparent 68%); }
+.sel.lit .sel-glow { opacity: 1; }
+/* a plain, smooth cylinder seen from above */
+.sel-knob { position: absolute; inset: 0; border-radius: 50%; transition: transform .45s cubic-bezier(.3,1.25,.5,1);
+  background: radial-gradient(circle, #2b2b30 0%, #222226 62%, #1a1a1d 100%);
+  box-shadow: 0 0 0 1.5px #0c0c0e, 0 5px 10px rgba(0,0,0,.55), 0 2px 3px rgba(0,0,0,.6),
+    inset 0 1px 1px rgba(255,255,255,.16), inset 0 -2px 3px rgba(0,0,0,.45); }
+/* soft sheen from the top light – a linear wash, so no off-centre rings */
+.sel-knob::after { content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+  background: linear-gradient(160deg, rgba(255,255,255,.10), rgba(255,255,255,0) 45%); }
+/* the light diode: shows where the knob points */
+.sel-ind { position: absolute; left: 50%; top: 14%; width: 13%; height: 13%; margin-left: -6.5%; border-radius: 50%;
+  background: #5a3a22; box-shadow: inset 0 1px 1px rgba(0,0,0,.5); transition: background .4s, box-shadow .4s; }
+.sel.lit .sel-ind { background: #ffb15c; box-shadow: 0 0 4px #ff9a3c, 0 0 10px rgba(255,140,40,.8); }
+.sel:active .sel-knob { filter: brightness(1.12); }
+.sel-name { position: absolute; z-index: 6; height: 22px; line-height: 22px; padding: 0 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; pointer-events: none;
+  color: #fff; background: rgba(20,20,24,.92); box-shadow: 0 4px 12px rgba(0,0,0,.4); opacity: 0; transform: translateX(-6px); transition: opacity .25s, transform .25s; }
+.sel-name.show { opacity: 1; transform: none; }
+:host([look="frame"]) .sel-glow { background: radial-gradient(circle, rgba(20,20,20,.07) 0 35%, transparent 65%); }
+:host([look="frame"]) .sel-knob { background: radial-gradient(circle, #262626 0%, #1a1a1a 65%, #121212 100%);
+  box-shadow: 0 4px 8px rgba(20,20,20,.22), 0 1px 2px rgba(20,20,20,.3), inset 0 1px 1px rgba(255,255,255,.14); }
+:host([look="frame"]) .sel-ind { background: #5c5c5c; box-shadow: none; }
+:host([look="frame"]) .sel.lit .sel-ind { background: #fff; box-shadow: 0 0 6px rgba(255,255,255,.9); }
+:host([look="frame"]) .sel-name { color: #fff; background: var(--vp-ink); box-shadow: none; }
 .now .where { color: var(--vp-dim); font-size: 11px; margin-top: 3px; display: inline-flex; gap: 4px; align-items: center; }
 .now .where svg { width: 12px; height: 12px; }
 .now { text-align: center; min-height: 40px; max-width: 640px; }
@@ -232,7 +257,7 @@ select.sort option { color: #000; }
   .app { grid-template-rows: auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr) auto; }
   header { grid-column: 1 / -1; }
   .deck { align-content: center; }
-  .plinth { width: min(46vw, 120vh); }
+  .plinth { width: min(42vw, 105vh); }
 }
 :host([card]) { height: var(--vp-card-height); border-radius: var(--ha-card-border-radius, 12px); overflow: hidden; }
 :host([card]) .app { min-height: 0; }
@@ -284,7 +309,7 @@ select.sort option { color: #000; }
   line-height: .85; color: var(--vp-ink); margin: 0 0 12px; }
 :host([look="frame"]) .now .track .muted { color: var(--vp-muted); }
 :host([look="frame"]) .now .sub { font-family: var(--vp-serif); font-size: 26px; line-height: 1.15; color: var(--vp-muted); margin-top: 6px; }
-:host([look="frame"]) .plinth { width: min(600px, 50vh, 52vw); align-self: center; border-radius: var(--ha-card-border-radius, 24px);
+:host([look="frame"]) .plinth { width: min(560px, 58vh, 52vw); align-self: center; border-radius: var(--ha-card-border-radius, 24px);
   background: var(--vp-deck); box-shadow: none; }
 :host([look="frame"]) .plinth::before { display: none; }
 :host([look="frame"]) .badge { color: rgba(20,20,20,.35); }
@@ -304,7 +329,9 @@ select.sort option { color: #000; }
 :host([look="frame"]) .arm.lifted .arm-inner { filter: drop-shadow(6px 10px 4px rgba(20,20,20,.16)); }
 :host([look="frame"]) .strobe { background: rgba(20,20,20,.15); }
 :host([look="frame"]) .strobe.on { background: var(--vp-ink); box-shadow: none; }
-:host([look="frame"]) .startstop { background: var(--vp-ink); color: #fff; box-shadow: none; }
+:host([look="frame"]) .startstop { background: linear-gradient(#2a2a2a, #141414); color: #fff; border-radius: 10px;
+  box-shadow: 0 3px 0 rgba(20,20,20,.35), 0 6px 10px rgba(20,20,20,.15), inset 0 1px 0 rgba(255,255,255,.18); }
+:host([look="frame"]) .startstop:active { box-shadow: 0 1px 0 rgba(20,20,20,.35), inset 0 1px 0 rgba(255,255,255,.12); }
 :host([look="frame"]) .startstop:active { transform: scale(.97); box-shadow: none; }
 :host([look="frame"]) .startstop .led { margin: 0; background: rgba(255,255,255,.3); box-shadow: none; }
 :host([look="frame"]) .startstop.on .led { background: #fff; box-shadow: 0 0 6px rgba(255,255,255,.9); }
@@ -312,8 +339,6 @@ select.sort option { color: #000; }
 :host([look="frame"]) .fader .fill { background: var(--vp-ink); opacity: 1; }
 :host([look="frame"]) .fader .knob { background: var(--vp-ink); border-radius: 999px; box-shadow: none; height: 11%; margin-top: -5.5%; }
 :host([look="frame"]) .fader .knob::after { background: var(--vp-card); }
-:host([look="frame"]) .speaker-btn { color: var(--vp-ink); background: rgba(20,20,20,.07); }
-:host([look="frame"]) .speaker-btn:hover, :host([look="frame"]) .speaker-btn.open { background: rgba(20,20,20,.14); }
 :host([look="frame"]) .speakers { box-shadow: 0 16px 40px rgba(20,20,20,.18); border: 0; border-radius: 20px; }
 :host([look="frame"]) .speakers button .ck { color: var(--vp-ink); }
 :host([look="frame"]) .now .where { font-size: 13px; margin-top: 10px; }
@@ -493,6 +518,11 @@ class VinylPlayerPanel extends HTMLElement {
         <section class="deck">
           <div class="plinth">
             <div class="badge">VINYL&nbsp;·&nbsp;33⅓</div>
+            <div class="sel" role="button" tabindex="0" aria-label="Speaker selector – tap for the next speaker, hold for the list">
+              <div class="sel-glow"></div>
+              <div class="sel-knob"><div class="sel-ind"></div></div>
+            </div>
+            <div class="sel-name"></div>
             <div class="platter-wrap">
               <div class="platter"><div class="disc hidden"><div class="label"></div></div></div>
               <div class="sheen"></div>
@@ -503,7 +533,6 @@ class VinylPlayerPanel extends HTMLElement {
             <div class="arm-base"></div>
             <div class="arm lifted"><div class="arm-inner">${TONEARM_SVG}</div></div>
             <button class="startstop" disabled><span class="ss-text">START</span><span class="led"></span></button>
-            <button class="speaker-btn" title="Speaker" aria-label="Choose speaker">${icon("speaker")}</button>
             <div class="fader" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="100">
               <div class="track"></div><div class="fill"></div><div class="knob"></div>
             </div>
@@ -554,13 +583,16 @@ class VinylPlayerPanel extends HTMLElement {
     this._bindStage();
     this._bindFader();
     this.$(".startstop").addEventListener("click", () => this._startStop());
-    this.$(".speaker-btn").addEventListener("click", (e) => {
-      e.stopPropagation();
-      this._toggleSpeakers();
-    });
+    const sel = this.$(".sel");
+    let holdTimer = null, held = false;
+    sel.addEventListener("pointerdown", () => { held = false; holdTimer = setTimeout(() => { held = true; this._toggleSpeakers(true, sel); }, 550); });
+    const release = () => clearTimeout(holdTimer);
+    sel.addEventListener("pointerup", () => { release(); if (!held) this._nextSpeaker(); });
+    sel.addEventListener("pointerleave", release);
+    sel.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); this._nextSpeaker(); } });
     this.shadowRoot.addEventListener("pointerdown", (e) => {
       const menu = this.$(".speakers");
-      if (menu.classList.contains("open") && !e.composedPath().some((n) => n === menu || n === this.$(".speaker-btn"))) {
+      if (menu.classList.contains("open") && !e.composedPath().some((n) => n === menu || n === this.$(".sel"))) {
         this._toggleSpeakers(false);
       }
     });
@@ -983,9 +1015,11 @@ class VinylPlayerPanel extends HTMLElement {
     const W = pl.clientWidth;
     const H = pl.clientHeight;
     if (!W || !H) return;
-    const D = H * 0.88;
-    const C = { x: W * 0.06 + D / 2, y: H / 2 };
-    const P = { x: W * 0.835, y: H * 0.17 };
+    // Technics-style deck: record left, speaker knob top-left, START/STOP
+    // front-left, tonearm and the volume ("pitch") fader on the right.
+    const D = H * 0.89;
+    const C = { x: W * 0.08 + D / 2, y: H * 0.5 };
+    const P = { x: W * 0.84, y: H * 0.17 };
     const dist = Math.hypot(P.x - C.x, P.y - C.y);
     const L = dist * 1.015;
     this.geo = { W, H, D, C, P, L };
@@ -998,17 +1032,13 @@ class VinylPlayerPanel extends HTMLElement {
     const strobe = this.$(".strobe");
     const ls = Math.max(6, H * 0.025);
     Object.assign(strobe.style, { left: `${W * 0.965 - ls}px`, top: `${H * 0.055}px`, width: `${ls}px` });
-    // START/STOP: the biggest round button that fits the bottom-left corner
-    // without touching the record.
-    const R = (D / 2) * 0.97;
-    const m = H * 0.03;
-    let bsz = H * 0.22;
-    while (bsz > H * 0.1) {
-      const bc = { x: m + bsz / 2, y: H - m - bsz / 2 };
-      if (Math.hypot(bc.x - C.x, bc.y - C.y) - R >= bsz / 2 + H * 0.012) break;
-      bsz -= 1;
-    }
-    Object.assign(this.$(".startstop").style, { width: `${bsz}px`, height: `${bsz}px`, left: `${m}px`, bottom: `${m}px` });
+    // Speaker knob in the top-left corner, clear of the record.
+    const ks = H * 0.14;
+    const kx = W * 0.085;
+    const ky = H * 0.13;
+    Object.assign(this.$(".sel").style, { width: `${ks}px`, height: `${ks}px`, left: `${kx - ks / 2}px`, top: `${ky - ks / 2}px` });
+    Object.assign(this.$(".sel-name").style, { left: `${kx + ks * 0.62}px`, top: `${ky - 11}px` });
+    this._renderKnob();
 
     // tonearm SVG scaled so its pivot sits on P and the stylus is L away.
     const scale = L / ARM_LEN;
@@ -1077,6 +1107,7 @@ class VinylPlayerPanel extends HTMLElement {
 
   _spin(on) {
     this.deck.targetSpeed = on ? DEG_PER_SEC : 0;
+    this.$(".sel")?.classList.toggle("lit", on);
     this._kick();
   }
 
@@ -1703,18 +1734,51 @@ class VinylPlayerPanel extends HTMLElement {
   }
 
   _updateWhere() {
+    this._renderKnob();
     const el = this.$(".now .where");
     if (!el) return;
     const id = this.info?.player;
     el.innerHTML = id ? `${icon("speaker", 12)}<span>${esc(this._speakerName(id))}</span>` : "";
   }
 
-  _toggleSpeakers(open) {
+  _knobAngle(i, n) {
+    return n <= 1 ? 0 : -135 + (i * 270) / (n - 1);
+  }
+
+  _renderKnob() {
+    const sel = this.$(".sel");
+    if (!sel) return;
+    const players = this.info?.players || [];
+    const n = players.length;
+    const cur = Math.max(0, players.indexOf(this.info?.player));
+    this.$(".sel-knob").style.transform = `rotate(${this._knobAngle(cur, n)}deg)`;
+    this.$(".sel-name").textContent = this._speakerName(this.info?.player);
+    sel.classList.toggle("lit", this.deck.speed > 0 || this.deck.targetSpeed > 0);
+  }
+
+  async _nextSpeaker() {
+    const players = (this.info?.players || []).filter((id) => this._hass?.states[id]?.state !== "unavailable");
+    if (players.length < 2) return this._toast(players.length ? "Only one speaker available" : "No speakers found");
+    const next = players[(players.indexOf(this.info.player) + 1) % players.length];
+    this.info = { ...this.info, player: next };
+    this._renderKnob();
+    const tag = this.$(".sel-name");
+    tag.classList.add("show");
+    clearTimeout(this._selNameTimer);
+    this._selNameTimer = setTimeout(() => tag.classList.remove("show"), 2200);
+    try {
+      await this.ws("set_player", { entity_id: next });
+      this._toast(`Playing on ${this._speakerName(next)}`);
+    } catch (e) {
+      this._toast(e.message || String(e));
+    }
+  }
+
+  _toggleSpeakers(open, anchor) {
     const menu = this.$(".speakers");
-    const btn = this.$(".speaker-btn");
+    const btn = anchor || this.$(".sel");
     const show = open ?? !menu.classList.contains("open");
     menu.classList.toggle("open", show);
-    btn.classList.toggle("open", show);
     if (!show) return;
     const players = this.info?.players || [];
     const states = this._hass?.states || {};

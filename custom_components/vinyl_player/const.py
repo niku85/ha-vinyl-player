@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 DOMAIN = "vinyl_player"
-VERSION = "0.4.0"
+VERSION = "0.5.0"
 
 CONF_USERNAME = "username"
 CONF_TOKEN = "token"

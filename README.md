@@ -96,10 +96,13 @@ To change the Discogs credentials, use *Reconfigure*.
 * **Pause** from anywhere else (HomePod, the MA app): the arm lifts and the platter coasts to a stop.
   Resuming spins it back up.
 * **Volume**: the fader on the right of the plinth.
-* **Speaker**: the speaker button above the fader lists every Music Assistant player. Pick one and a
-  record that's spinning moves over without restarting (Music Assistant queue transfer). The choice
-  is remembered, and the current speaker is shown under the track. The default speaker in
-  *Configure* is still the starting point.
+* **Speaker**: the round knob in the top-left corner of the turntable picks the speaker, like the
+  selector knob on a classic deck. Tap it to turn to the next Music Assistant player; its light diode
+  shows the position and glows while a record spins. Hold it for the full list. A record that's
+  spinning moves over without restarting (Music Assistant queue transfer). The name pops up next to
+  the knob, the choice is remembered, and the current speaker is also shown under the track. The
+  default speaker in *Configure* is still the starting point.
+* **START / STOP**: the rectangular button in the front-left corner, with a state LED.
 * **Pause** (from the HomePod or the MA app) lifts the arm. **START** then resumes where it paused,
   instead of starting the album again.
 * ⚙ → *This album*: if Music Assistant picks the wrong version (e.g. a deluxe edition), set its
