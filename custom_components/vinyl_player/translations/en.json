@@ -1,0 +1,99 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect your Discogs collection",
+        "description": "Enter your Discogs username and a personal access token. Create the token at {token_url} (\"Generate new token\").",
+        "data": {
+          "username": "Discogs username",
+          "token": "Personal access token"
+        }
+      },
+      "player": {
+        "title": "Choose the speaker",
+        "description": "Records are played through Music Assistant (e.g. with Apple Music as streaming provider).",
+        "data": {
+          "player_entity_id": "Music Assistant player",
+          "vinyl_only": "Only show vinyl records",
+          "runout_mode": "End-of-record sound"
+        }
+      },
+      "reconfigure": {
+        "title": "Update Discogs credentials",
+        "description": "Create a new token at {token_url} if needed.",
+        "data": {
+          "username": "Discogs username",
+          "token": "Personal access token"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Discogs rejected the username or token.",
+      "token_user_mismatch": "The token belongs to a different Discogs user.",
+      "cannot_connect": "Cannot reach Discogs."
+    },
+    "abort": {
+      "single_instance_allowed": "Vinyl Player is already set up.",
+      "already_configured": "This Discogs account is already set up.",
+      "music_assistant_missing": "Music Assistant must be installed and set up in Home Assistant first.",
+      "no_players": "Music Assistant has no media players yet.",
+      "reconfigure_successful": "Credentials updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Vinyl Player options",
+        "data": {
+          "player_entity_id": "Music Assistant player",
+          "vinyl_only": "Only show vinyl records",
+          "runout_mode": "End-of-record sound",
+          "sync_interval_hours": "Re-sync Discogs every (0 = never)"
+        }
+      }
+    }
+  },
+  "selector": {
+    "runout_mode": {
+      "options": {
+        "speaker": "Play it on the speaker",
+        "browser": "Play it in the panel (browser)",
+        "off": "Off"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "turntable": {
+        "name": "Turntable",
+        "state": {
+          "idle": "Idle",
+          "playing": "Playing",
+          "runout": "Run-out groove"
+        }
+      },
+      "records": { "name": "Records" }
+    }
+  },
+  "services": {
+    "play": {
+      "name": "Play record",
+      "description": "Put a record from the collection on the turntable.",
+      "fields": {
+        "release_id": { "name": "Discogs release ID", "description": "Release to play." },
+        "tag_id": { "name": "NFC tag ID", "description": "Play the record linked to this tag instead." }
+      }
+    },
+    "stop": { "name": "Stop", "description": "Lift the tonearm and stop playback." },
+    "sync": { "name": "Sync Discogs", "description": "Re-export the Discogs collection and cache missing covers." },
+    "link_tag": {
+      "name": "Link NFC tag",
+      "description": "Link an NFC tag ID to a record (leave release empty to unlink).",
+      "fields": {
+        "tag_id": { "name": "Tag ID", "description": "The NFC tag ID (HA tag) or the name you use in the Apple Shortcut." },
+        "release_id": { "name": "Discogs release ID", "description": "Record to play when the tag is scanned." },
+        "name": { "name": "Label", "description": "Optional friendly name." }
+      }
+    }
+  }
+}

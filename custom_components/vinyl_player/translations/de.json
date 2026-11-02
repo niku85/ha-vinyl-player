@@ -1,0 +1,89 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Discogs-Sammlung verbinden",
+        "description": "Gib deinen Discogs-Benutzernamen und einen persönlichen Zugangstoken ein. Den Token erstellst du unter {token_url} („Generate new token“).",
+        "data": { "username": "Discogs-Benutzername", "token": "Persönlicher Zugangstoken" }
+      },
+      "player": {
+        "title": "Lautsprecher wählen",
+        "description": "Die Platten werden über Music Assistant abgespielt (z. B. mit Apple Music als Streaming-Anbieter).",
+        "data": {
+          "player_entity_id": "Music-Assistant-Player",
+          "vinyl_only": "Nur Vinyl anzeigen",
+          "runout_mode": "Geräusch am Plattenende"
+        }
+      },
+      "reconfigure": {
+        "title": "Discogs-Zugangsdaten ändern",
+        "description": "Bei Bedarf unter {token_url} einen neuen Token erstellen.",
+        "data": { "username": "Discogs-Benutzername", "token": "Persönlicher Zugangstoken" }
+      }
+    },
+    "error": {
+      "invalid_auth": "Discogs hat Benutzername oder Token abgelehnt.",
+      "token_user_mismatch": "Der Token gehört zu einem anderen Discogs-Benutzer.",
+      "cannot_connect": "Discogs ist nicht erreichbar."
+    },
+    "abort": {
+      "single_instance_allowed": "Vinyl Player ist bereits eingerichtet.",
+      "already_configured": "Dieses Discogs-Konto ist bereits eingerichtet.",
+      "music_assistant_missing": "Music Assistant muss zuerst in Home Assistant installiert und eingerichtet sein.",
+      "no_players": "Music Assistant hat noch keine Mediaplayer.",
+      "reconfigure_successful": "Zugangsdaten aktualisiert."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Vinyl-Player-Optionen",
+        "data": {
+          "player_entity_id": "Music-Assistant-Player",
+          "vinyl_only": "Nur Vinyl anzeigen",
+          "runout_mode": "Geräusch am Plattenende",
+          "sync_interval_hours": "Discogs neu synchronisieren alle (0 = nie)"
+        }
+      }
+    }
+  },
+  "selector": {
+    "runout_mode": {
+      "options": {
+        "speaker": "Auf dem Lautsprecher abspielen",
+        "browser": "Im Panel (Browser) abspielen",
+        "off": "Aus"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "turntable": {
+        "name": "Plattenspieler",
+        "state": { "idle": "Bereit", "playing": "Spielt", "runout": "Auslaufrille" }
+      },
+      "records": { "name": "Platten" }
+    }
+  },
+  "services": {
+    "play": {
+      "name": "Platte abspielen",
+      "description": "Legt eine Platte aus der Sammlung auf den Plattenteller.",
+      "fields": {
+        "release_id": { "name": "Discogs-Release-ID", "description": "Abzuspielendes Release." },
+        "tag_id": { "name": "NFC-Tag-ID", "description": "Stattdessen die mit diesem Tag verknüpfte Platte abspielen." }
+      }
+    },
+    "stop": { "name": "Stopp", "description": "Tonarm anheben und Wiedergabe stoppen." },
+    "sync": { "name": "Discogs synchronisieren", "description": "Sammlung neu exportieren und fehlende Cover laden." },
+    "link_tag": {
+      "name": "NFC-Tag verknüpfen",
+      "description": "Verknüpft eine NFC-Tag-ID mit einer Platte (ohne Release = Verknüpfung lösen).",
+      "fields": {
+        "tag_id": { "name": "Tag-ID", "description": "Die NFC-Tag-ID (HA-Tag) oder der Name aus dem Apple-Kurzbefehl." },
+        "release_id": { "name": "Discogs-Release-ID", "description": "Platte, die beim Scannen abgespielt wird." },
+        "name": { "name": "Bezeichnung", "description": "Optionaler Anzeigename." }
+      }
+    }
+  }
+}

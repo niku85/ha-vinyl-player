@@ -1,0 +1,15 @@
+{
+  "domain": "vinyl_player",
+  "name": "Vinyl Player",
+  "after_dependencies": ["music_assistant", "tag"],
+  "codeowners": ["@niku85"],
+  "config_flow": true,
+  "dependencies": ["http", "frontend", "panel_custom", "webhook", "websocket_api"],
+  "documentation": "https://github.com/niku85/ha-vinyl-player",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/niku85/ha-vinyl-player/issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "0.1.0"
+}
