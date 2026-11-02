@@ -42,6 +42,8 @@ COLLECTION = {
         {"id": 1, "artist": "The Beatles", "title": "Abbey Road", "year": 1969, "vinyl": True,
          "cover_file": "covers/1.jpg"},
         {"id": 2, "artist": "Air", "title": "Moon Safari", "year": 1998, "vinyl": True},
+        {"id": 3, "artist": "Hidden", "title": "Secret LP", "vinyl": True, "hidden": True,
+         "tag_id": "secret-tag", "ma_query": "Hidden - Secret LP (Remastered)"},
     ],
 }
 
@@ -63,6 +65,21 @@ async def setup(hass: HomeAssistant, tmp_path):
 
     hass.config.components.add("music_assistant")
     hass.services.async_register("music_assistant", "play_media", record)
+
+    async def search(call: ServiceCall):
+        calls.append(call)
+        if call.data["name"] == "Abbey Road":
+            return {"albums": [{"name": "Abbey Road (Remastered)", "uri": "apple_music://album/1",
+                                "artists": [{"name": "The Beatles"}]}]}
+        return {"albums": [{"name": "Something Else", "uri": "apple_music://album/9",
+                            "artists": [{"name": "Someone"}]}]}
+
+    from homeassistant.core import SupportsResponse
+
+    hass.services.async_register(
+        "music_assistant", "search", search, supports_response=SupportsResponse.ONLY
+    )
+
     for svc in ("shuffle_set", "repeat_set", "media_stop", "volume_set", "play_media"):
         hass.services.async_register("media_player", svc, record)
     hass.states.async_set(PLAYER, "idle")
@@ -123,7 +140,7 @@ async def test_play_calls_music_assistant(hass: HomeAssistant, setup) -> None:
 
 async def test_override_is_used(hass: HomeAssistant, setup) -> None:
     entry, calls = setup
-    entry.runtime_data.async_set_override(1, "apple_music://album/123")
+    await entry.runtime_data.async_set_override(1, "apple_music://album/123")
     await hass.services.async_call(DOMAIN, "play", {"release_id": 1}, blocking=True)
     ma = [c for c in calls if c.domain == "music_assistant"][0]
     assert ma.data["media_id"] == "apple_music://album/123"
@@ -185,7 +202,7 @@ async def test_nfc_tag_and_learning(hass: HomeAssistant, setup) -> None:
 
 async def test_webhook(hass: HomeAssistant, setup, hass_client_no_auth) -> None:
     entry, calls = setup
-    entry.runtime_data.async_set_tag("abbey-road", 1)
+    await entry.runtime_data.async_set_tag("abbey-road", 1)
     client = await hass_client_no_auth()
     resp = await client.post("/api/webhook/hook123", json={"tag": "abbey-road"})
     assert resp.status == 200
@@ -211,3 +228,67 @@ async def test_websocket(hass: HomeAssistant, setup, hass_ws_client) -> None:
     msg = await ws.receive_json()
     assert msg["event"]["state"]["phase"] == "idle"
     assert msg["event"]["webhook_id"] == "hook123"
+
+
+def _file(hass):
+    with open(hass.config.path("vinyl_player", "collection.json"), encoding="utf-8") as fh:
+        return {r["id"]: r for r in json.load(fh)["releases"]}
+
+
+async def test_hidden_record_and_file_tag(hass: HomeAssistant, setup) -> None:
+    """hidden keeps a record off the shelf; its tag_id from the file still plays it."""
+    entry, calls = setup
+    manager = entry.runtime_data
+    assert [r["id"] for r in manager.releases] == [1, 2]
+    hass.bus.async_fire("tag_scanned", {"tag_id": "secret-tag"})
+    await hass.async_block_till_done()
+    ma = [c for c in calls if c.domain == "music_assistant" and c.service == "play_media"]
+    assert ma[0].data["media_id"] == "Hidden - Secret LP (Remastered)"
+
+
+async def test_ui_edits_are_written_to_collection_json(hass: HomeAssistant, setup) -> None:
+    entry, _ = setup
+    manager = entry.runtime_data
+    await manager.async_set_tag("abc", 1)
+    await manager.async_set_tag("def", 1)
+    await manager.async_set_override(2, "Air - Moon Safari (Remastered)")
+    await manager.async_set_hidden(2, True)
+    data = await hass.async_add_executor_job(_file, hass)
+    assert data[1]["tag_id"] == ["abc", "def"]
+    assert data[2]["ma_query"] == "Air - Moon Safari (Remastered)" and data[2]["hidden"] is True
+    await manager.async_set_tag("abc", None)
+    data = await hass.async_add_executor_job(_file, hass)
+    assert data[1]["tag_id"] == "def"
+    assert manager.tags["def"]["release_id"] == 1 and "abc" not in manager.tags
+
+
+async def test_sync_keeps_hand_edited_fields(hass: HomeAssistant, setup) -> None:
+    entry, _ = setup
+    manager = entry.runtime_data
+    item = {
+        "id": 3, "instance_id": 1,
+        "basic_information": {"id": 3, "title": "Secret LP", "artists": [{"name": "Hidden"}],
+                              "formats": [{"name": "Vinyl"}]},
+    }
+    with (
+        patch("custom_components.vinyl_player.api.DiscogsClient.fetch_collection_items",
+              AsyncMock(return_value=[item])),
+        patch("custom_components.vinyl_player.api.DiscogsClient.download_covers",
+              AsyncMock(return_value=0)),
+    ):
+        await manager.async_sync()
+    data = await hass.async_add_executor_job(_file, hass)
+    assert list(data) == [3]
+    assert data[3]["tag_id"] == "secret-tag" and data[3]["hidden"] is True
+    assert data[3]["ma_query"] == "Hidden - Secret LP (Remastered)"
+
+
+async def test_check_matches(hass: HomeAssistant, setup) -> None:
+    entry, _ = setup
+    with patch.object(type(entry.runtime_data), "_music_assistant_entry_id", return_value="ma1"):
+        result = await hass.services.async_call(
+            DOMAIN, "check_matches", {}, blocking=True, return_response=True
+        )
+    assert result["checked"] == 2  # hidden records are skipped
+    assert [m["title"] for m in result["misses"]] == ["Moon Safari"]
+    assert result["misses"][0]["best"]["uri"] == "apple_music://album/9"

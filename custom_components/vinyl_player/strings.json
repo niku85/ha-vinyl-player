@@ -72,7 +72,9 @@
           "runout": "Run-out groove"
         }
       },
-      "records": { "name": "Records" }
+      "records": {
+        "name": "Records"
+      }
     }
   },
   "services": {
@@ -80,20 +82,45 @@
       "name": "Play record",
       "description": "Put a record from the collection on the turntable.",
       "fields": {
-        "release_id": { "name": "Discogs release ID", "description": "Release to play." },
-        "tag_id": { "name": "NFC tag ID", "description": "Play the record linked to this tag instead." }
+        "release_id": {
+          "name": "Discogs release ID",
+          "description": "Release to play."
+        },
+        "tag_id": {
+          "name": "NFC tag ID",
+          "description": "Play the record linked to this tag instead."
+        }
       }
     },
-    "stop": { "name": "Stop", "description": "Lift the tonearm and stop playback." },
-    "sync": { "name": "Sync Discogs", "description": "Re-export the Discogs collection and cache missing covers." },
+    "stop": {
+      "name": "Stop",
+      "description": "Lift the tonearm and stop playback."
+    },
+    "sync": {
+      "name": "Sync Discogs",
+      "description": "Re-export the Discogs collection and cache missing covers."
+    },
     "link_tag": {
       "name": "Link NFC tag",
       "description": "Link an NFC tag ID to a record (leave release empty to unlink).",
       "fields": {
-        "tag_id": { "name": "Tag ID", "description": "The NFC tag ID (HA tag) or the name you use in the Apple Shortcut." },
-        "release_id": { "name": "Discogs release ID", "description": "Record to play when the tag is scanned." },
-        "name": { "name": "Label", "description": "Optional friendly name." }
+        "tag_id": {
+          "name": "Tag ID",
+          "description": "The NFC tag ID (HA tag) or the name you use in the Apple Shortcut."
+        },
+        "release_id": {
+          "name": "Discogs release ID",
+          "description": "Record to play when the tag is scanned."
+        },
+        "name": {
+          "name": "Label",
+          "description": "Optional friendly name."
+        }
       }
+    },
+    "check_matches": {
+      "name": "Check Music Assistant matches",
+      "description": "Search every record in Music Assistant and return the ones it cannot find (fix them with ma_query)."
     }
   }
 }

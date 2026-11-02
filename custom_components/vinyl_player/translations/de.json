@@ -4,7 +4,10 @@
       "user": {
         "title": "Discogs-Sammlung verbinden",
         "description": "Gib deinen Discogs-Benutzernamen und einen persönlichen Zugangstoken ein. Den Token erstellst du unter {token_url} („Generate new token“).",
-        "data": { "username": "Discogs-Benutzername", "token": "Persönlicher Zugangstoken" }
+        "data": {
+          "username": "Discogs-Benutzername",
+          "token": "Persönlicher Zugangstoken"
+        }
       },
       "player": {
         "title": "Lautsprecher wählen",
@@ -18,7 +21,10 @@
       "reconfigure": {
         "title": "Discogs-Zugangsdaten ändern",
         "description": "Bei Bedarf unter {token_url} einen neuen Token erstellen.",
-        "data": { "username": "Discogs-Benutzername", "token": "Persönlicher Zugangstoken" }
+        "data": {
+          "username": "Discogs-Benutzername",
+          "token": "Persönlicher Zugangstoken"
+        }
       }
     },
     "error": {
@@ -60,9 +66,15 @@
     "sensor": {
       "turntable": {
         "name": "Plattenspieler",
-        "state": { "idle": "Bereit", "playing": "Spielt", "runout": "Auslaufrille" }
+        "state": {
+          "idle": "Bereit",
+          "playing": "Spielt",
+          "runout": "Auslaufrille"
+        }
       },
-      "records": { "name": "Platten" }
+      "records": {
+        "name": "Platten"
+      }
     }
   },
   "services": {
@@ -70,20 +82,45 @@
       "name": "Platte abspielen",
       "description": "Legt eine Platte aus der Sammlung auf den Plattenteller.",
       "fields": {
-        "release_id": { "name": "Discogs-Release-ID", "description": "Abzuspielendes Release." },
-        "tag_id": { "name": "NFC-Tag-ID", "description": "Stattdessen die mit diesem Tag verknüpfte Platte abspielen." }
+        "release_id": {
+          "name": "Discogs-Release-ID",
+          "description": "Abzuspielendes Release."
+        },
+        "tag_id": {
+          "name": "NFC-Tag-ID",
+          "description": "Stattdessen die mit diesem Tag verknüpfte Platte abspielen."
+        }
       }
     },
-    "stop": { "name": "Stopp", "description": "Tonarm anheben und Wiedergabe stoppen." },
-    "sync": { "name": "Discogs synchronisieren", "description": "Sammlung neu exportieren und fehlende Cover laden." },
+    "stop": {
+      "name": "Stopp",
+      "description": "Tonarm anheben und Wiedergabe stoppen."
+    },
+    "sync": {
+      "name": "Discogs synchronisieren",
+      "description": "Sammlung neu exportieren und fehlende Cover laden."
+    },
     "link_tag": {
       "name": "NFC-Tag verknüpfen",
       "description": "Verknüpft eine NFC-Tag-ID mit einer Platte (ohne Release = Verknüpfung lösen).",
       "fields": {
-        "tag_id": { "name": "Tag-ID", "description": "Die NFC-Tag-ID (HA-Tag) oder der Name aus dem Apple-Kurzbefehl." },
-        "release_id": { "name": "Discogs-Release-ID", "description": "Platte, die beim Scannen abgespielt wird." },
-        "name": { "name": "Bezeichnung", "description": "Optionaler Anzeigename." }
+        "tag_id": {
+          "name": "Tag-ID",
+          "description": "Die NFC-Tag-ID (HA-Tag) oder der Name aus dem Apple-Kurzbefehl."
+        },
+        "release_id": {
+          "name": "Discogs-Release-ID",
+          "description": "Platte, die beim Scannen abgespielt wird."
+        },
+        "name": {
+          "name": "Bezeichnung",
+          "description": "Optionaler Anzeigename."
+        }
       }
+    },
+    "check_matches": {
+      "name": "Music-Assistant-Treffer prüfen",
+      "description": "Sucht jede Platte in Music Assistant und listet die, die nicht gefunden werden (mit ma_query korrigieren)."
     }
   }
 }

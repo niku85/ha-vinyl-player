@@ -13,7 +13,7 @@ from typing import Any
 from collections.abc import Iterable
 
 API_BASE = "https://api.discogs.com"
-USER_AGENT = "HAVinylPlayer/0.1 +https://github.com/niku85/ha-vinyl-player"
+USER_AGENT = "HAVinylPlayer/0.2 +https://github.com/niku85/ha-vinyl-player"
 PER_PAGE = 100
 EXPORT_VERSION = 1
 
@@ -115,6 +115,11 @@ def parse_collection_item(item: dict[str, Any]) -> dict[str, Any]:
         "cover_url": info.get("cover_image") or None,
         "thumb_url": info.get("thumb") or None,
         "cover_file": None,
+        "thumb_file": None,
+        # Hand-editable fields – kept across re-exports (see merge_user_fields).
+        "ma_query": None,
+        "tag_id": None,
+        "hidden": False,
         "date_added": item.get("date_added"),
         "rating": item.get("rating") or 0,
     }
@@ -137,6 +142,53 @@ def build_releases(
         seen.values(),
         key=lambda r: (sort_key(r["artist"]), r["year"] or 9999, sort_key(r["title"])),
     )
+
+
+# Fields the user may edit by hand in collection.json; a re-export keeps them.
+USER_FIELDS = ("ma_query", "tag_id", "hidden")
+
+
+def merge_user_fields(
+    releases: list[dict[str, Any]], previous: Iterable[dict[str, Any]] | None
+) -> list[dict[str, Any]]:
+    """Copy ``ma_query`` / ``tag_id`` / ``hidden`` from a previous export."""
+    old = {int(r["id"]): r for r in previous or [] if r.get("id") is not None}
+    for release in releases:
+        prev = old.get(int(release["id"]))
+        if not prev:
+            continue
+        for field in USER_FIELDS:
+            if prev.get(field) not in (None, "", False, []):
+                release[field] = prev[field]
+    return releases
+
+
+def tag_ids(release: dict[str, Any]) -> list[str]:
+    """``tag_id`` may be a single string or a list (several tags per record)."""
+    value = release.get("tag_id")
+    if not value:
+        return []
+    values = value if isinstance(value, list) else [value]
+    return [str(v).strip() for v in values if str(v).strip()]
+
+
+def normalize(text: str | None) -> str:
+    """Loose title comparison: case/punctuation-insensitive, no (Remastered) etc."""
+    text = re.sub(r"\(.*?\)|\[.*?\]", "", (text or "").casefold())
+    text = text.split(" - ")[0]
+    return re.sub(r"[\W_]+", "", text)
+
+
+def album_matches(release: dict[str, Any], candidate: dict[str, Any]) -> bool:
+    """Does a Music Assistant search result look like this record?"""
+    want, got = normalize(release.get("title")), normalize(candidate.get("name"))
+    if not want or not got or not (want == got or got.startswith(want) or want.startswith(got)):
+        return False
+    artists = [normalize(a.get("name")) for a in candidate.get("artists") or []]
+    if not artists:
+        return True
+    wanted = [normalize(a) for a in release.get("artists") or [release.get("artist")]]
+    return any(w and (w in a or a in w) for w in wanted for a in artists)
 
 
 def build_export(username: str, releases: list[dict[str, Any]]) -> dict[str, Any]:

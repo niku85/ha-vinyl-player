@@ -27,7 +27,7 @@ revolutions *(crackle… thump… crackle…)* and then the arm returns to its r
 | Part | Where | What it does |
 |---|---|---|
 | **1. Export script** | [`scripts/discogs_export.py`](scripts/discogs_export.py) | Exports your Discogs collection to `collection.json` and downloads all covers. Standard library only. |
-| **2. Cover flow app** | [`custom_components/vinyl_player/frontend`](custom_components/vinyl_player/frontend/vinyl-player-panel.js) | A sidebar panel in HA: cover flow (swipe, drag, mouse wheel, arrow keys, search, sort, scrubber) plus the sleeve → platter animation. |
+| **2. Cover flow app** | [`custom_components/vinyl_player/frontend`](custom_components/vinyl_player/frontend/vinyl-player-panel.js) | A sidebar panel **and** a dashboard card (`custom:vinyl-player-card`): cover flow (swipe, drag, mouse wheel, arrow keys, search, sort, scrubber) plus the sleeve → platter animation. |
 | **3. Turntable** | same panel | Spinning platter (33⅓ rpm), a tonearm that follows the album, START/STOP, a volume fader, the current side/track (e.g. `B2 · Here Comes the Sun`). No skip buttons. |
 | **4. Playback** | [`custom_components/vinyl_player`](custom_components/vinyl_player) | A Home Assistant integration that plays the album via `music_assistant.play_media`. It turns off shuffle and repeat, detects when the album ends and plays the run-out sound. |
 | NFC | integration + [docs](docs/nfc-and-shortcuts.md) | A list of tag → album links, a "scan to link" mode, HA Companion tags, and a webhook for an **Apple Shortcut**. |
@@ -35,9 +35,11 @@ revolutions *(crackle… thump… crackle…)* and then the arm returns to its r
 
 ## Requirements
 
-* Home Assistant **2024.12** or newer
+* Home Assistant **2024.12** or newer (tested with 2026.2)
 * **Music Assistant** installed **and** added to HA (Settings → Devices & services → Music Assistant),
   with a streaming provider such as Apple Music and at least one player
+* A wall tablet works well: the animations only use transforms and opacity, side covers use small
+  cached thumbnails, and only about 15 covers are rendered at a time
 * A Discogs account and a **personal access token**:
   [discogs.com/settings/developers](https://www.discogs.com/settings/developers) → *Generate new token*
 
@@ -65,13 +67,34 @@ To change the Discogs credentials, use *Reconfigure*.
 
 ## Using it
 
+* **Sidebar or dashboard tab.** The integration adds a *Vinyl Player* sidebar entry. For a tab on a
+  dashboard (e.g. the wall iPad), add a view of type **panel** with the card:
+
+  ```yaml
+  views:
+    - title: Vinyl
+      path: vinyl
+      type: panel
+      cards:
+        - type: custom:vinyl-player-card
+          # height: 720px   # optional; default fills the view
+          # header: false   # hide search / sort / settings
+  ```
+  The card is loaded automatically, so you don't need to add a resource.
 * **Swipe** or drag the covers, or use the scroll wheel or the ← → keys. The slider underneath jumps through big collections.
 * **Tap the centre cover** (or press Enter) to put the record on the turntable.
 * **STOP** lifts the arm and stops playback. **START** drops the needle on the same record again.
+* **Tap the turntable** to put the record away: the arm lifts, the platter stops, and the record flies
+  back into its sleeve on the shelf. Playback stops too.
+* **Pause** from anywhere else (HomePod, the MA app): the arm lifts and the platter coasts to a stop.
+  Resuming spins it back up.
 * **Volume**: the fader on the right of the plinth.
-* Tap the record on the platter to scroll the shelf back to it.
-* ⚙ → *This album*: if Music Assistant picks the wrong version (e.g. a deluxe edition), paste a
-  Music Assistant URI such as `apple_music://album/1441164426`, or a better search text.
+* ⚙ → *This album*: if Music Assistant picks the wrong version (e.g. a deluxe edition), set its
+  `ma_query`: a Music Assistant URI such as `apple_music://album/1441164426`, or a better search text.
+  You can also hide the record from the shelf there.
+* ⚙ → *Collection* → **Check all records** runs every album through Music Assistant search and lists
+  the misses, each with MA's best guess. Press **Use** to store the guess as `ma_query`, or **Edit** to
+  type your own. You can also call it as a service: `vinyl_player.check_matches`.
 * Deep link: `/vinyl-player?release=<discogs release id>` opens the panel on that record.
 
 If playback starts anywhere else (an NFC tag, the Shortcut, an automation, another tablet), every open
@@ -86,8 +109,28 @@ python3 scripts/discogs_export.py --username YOUR_NAME --token YOUR_TOKEN --outp
 #   --no-covers     skip downloading covers
 ```
 
-The integration's own sync writes exactly the same format to `<config>/vinyl_player/`. So you can run
-the script on another machine and copy the folder over, and the integration will pick it up.
+You can also pass them positionally, `discogs_export.py YOUR_NAME YOUR_TOKEN`. The script works from
+`/config/scripts/` too: it finds the shared helpers in `/config/custom_components/vinyl_player/`.
+
+You normally don't need it: the integration exports on first start and then re-syncs on its own
+(every 24 h by default). That replaces the `shell_command` + nightly automation. The integration's
+sync writes exactly the same format to `<config>/vinyl_player/`, so you can also run the script on
+another machine and copy the folder over.
+
+### Fields you can edit by hand
+
+Each record in `collection.json` has three fields that **survive every re-export**, whether from the
+integration or the script:
+
+| Field | Meaning |
+|---|---|
+| `ma_query` | What Music Assistant should search for instead of *artist + title*, e.g. `"Pink Floyd - The Dark Side Of The Moon (Remastered)"`, or an exact URI like `apple_music://album/1065973699` |
+| `tag_id` | The NFC tag(s) for this LP: a string, or a list if several tags or Shortcut names should start it |
+| `hidden` | `true` keeps the record out of the cover flow. Its tags still work. |
+
+The panel writes to these same fields when you pair a tag, fix a match or hide a record, so the file
+stays the single place for them. After editing the file by hand, run `vinyl_player.sync` or reload
+the integration.
 
 <details><summary><code>collection.json</code> format</summary>
 
@@ -101,7 +144,9 @@ the script on another machine and copy the folder over, and the integration will
     "formats": ["Album", "LP", "Vinyl"], "format_text": "Vinyl, LP, Album", "vinyl": true,
     "genres": ["Rock"], "styles": ["Pop Rock"], "labels": ["Apple Records"], "catno": "PCS 7088",
     "cover_url": "https://i.discogs.com/…", "thumb_url": "https://i.discogs.com/…",
-    "cover_file": "covers/249504.jpg", "date_added": "2024-01-01T10:00:00-08:00", "rating": 0
+    "cover_file": "covers/249504.jpg", "thumb_file": "covers/thumbs/249504.jpg",
+    "date_added": "2024-01-01T10:00:00-08:00", "rating": 0,
+    "ma_query": null, "tag_id": "a1b2c3d4", "hidden": false
   }]
 }
 ```
@@ -111,14 +156,17 @@ the script on another machine and copy the folder over, and the integration will
 
 See **[docs/nfc-and-shortcuts.md](docs/nfc-and-shortcuts.md)**. In short:
 
+* **ESP32 reader:** an ESP32 with a PN532 running ESPHome sends `tag_scanned` to HA. Put it in a
+  puck next to the real turntable: lay the record down and the music starts. A config is in the docs.
 * **Option A (no Shortcut):** write tags with the HA Companion app, then in the panel open
   ⚙ → *NFC tags* → **Scan tag to link** and scan the tag. After that, touching the tag starts the record.
 * **Option B (Apple Shortcut):** an iOS NFC automation runs the *Play Vinyl* shortcut. The shortcut
   POSTs `{"tag": "<name>"}` to the integration's webhook and opens the panel. The panel shows the
   exact webhook URL.
 
-The links are stored as a list of *tag → album* in HA. You can manage them in the panel or with the
-`vinyl_player.link_tag` service.
+There is one handler for the whole collection, so you don't write an automation per record. Links
+are stored as each record's `tag_id` in `collection.json`. You can manage them in the panel, by hand
+in the file, or with the `vinyl_player.link_tag` service.
 
 ## Services, events, entities
 
@@ -128,6 +176,7 @@ The links are stored as a list of *tag → album* in HA. You can manage them in 
 | `vinyl_player.stop` | – |
 | `vinyl_player.sync` | – re-export from Discogs and cache any new covers |
 | `vinyl_player.link_tag` | `tag_id`, `release_id` (leave it out to unlink), `name` |
+| `vinyl_player.check_matches` | – searches every record in Music Assistant and returns the misses |
 
 Events: `vinyl_player_album_started`, `vinyl_player_album_finished`, `vinyl_player_tag_learned`,
 `vinyl_player_unknown_tag`.

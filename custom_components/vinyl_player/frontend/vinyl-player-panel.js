@@ -5,7 +5,7 @@
  * album through Music Assistant. No build step, no dependencies.
  */
 
-const VERSION = "0.1.0";
+const VERSION = "0.2.0";
 const DEG_PER_SEC = 200; // 33⅓ rpm
 const WINDOW = 7; // covers rendered on each side of the centre
 const ARM_SVG_H = 300; // tonearm SVG viewBox height
@@ -209,6 +209,10 @@ select.sort option { color: #000; }
   .deck { align-content: center; }
   .plinth { width: min(46vw, 120vh); }
 }
+:host([card]) { height: var(--vp-card-height); border-radius: var(--ha-card-border-radius, 12px); overflow: hidden; }
+:host([card]) .app { min-height: 0; }
+:host([card]) ha-menu-button { display: none !important; }
+:host([noheader]) header { display: none; }
 @media (prefers-reduced-motion: reduce) { .arm.wobble .arm-inner { animation: none; } }
 `;
 
@@ -415,7 +419,7 @@ class VinylPlayerPanel extends HTMLElement {
     this._bindStage();
     this._bindFader();
     this.$(".startstop").addEventListener("click", () => this._startStop());
-    this.$(".platter-wrap").addEventListener("click", () => this._focusOnDeckRecord());
+    this.$(".platter-wrap").addEventListener("click", () => this._putAway());
     this.$(".settings").addEventListener("click", () => this._openSheet());
     this.$(".sheet .scrim").addEventListener("click", () => this._closeSheet());
     this.$(".sheet .close").addEventListener("click", () => this._closeSheet());
@@ -498,9 +502,10 @@ class VinylPlayerPanel extends HTMLElement {
     this._renderDeck();
   }
 
-  _coverStyle(r) {
-    return r.cover
-      ? `background-image:url("${String(r.cover).replace(/["\\\n\r]/g, (c) => encodeURIComponent(c))}")`
+  _coverStyle(r, thumb = false) {
+    const src = thumb ? r.thumb || r.cover : r.cover;
+    return src
+      ? `background-image:url("${String(src).replace(/["\\\n\r]/g, (c) => encodeURIComponent(c))}")`
       : `background-image:linear-gradient(135deg, hsl(${hue(r.id)} 45% 38%), hsl(${(hue(r.id) + 60) % 360} 55% 18%))`;
   }
 
@@ -509,7 +514,9 @@ class VinylPlayerPanel extends HTMLElement {
     const el = document.createElement("div");
     el.className = "item";
     el.dataset.i = i;
-    const style = this._coverStyle(r);
+    // Side covers use the small cached thumbnail; the full cover is loaded once
+    // the record gets close to the centre (see _renderFlow).
+    const style = this._coverStyle(r, true);
     el.innerHTML = `<div class="cover" style="${esc(style)}">${
       r.cover ? "" : `<div class="ph">${esc(r.title)}<small>${esc(r.artist)}</small></div>`
     }<div class="shade"></div></div><div class="reflect" style="${esc(style)}"></div>`;
@@ -546,6 +553,15 @@ class VinylPlayerPanel extends HTMLElement {
       el.style.transform = `translate3d(${x}px,0,${z}px) rotateY(${ry}deg)`;
       el.style.zIndex = String(1000 - Math.round(Math.abs(o) * 10));
       el.style.setProperty("--shade", (Math.min(Math.abs(o), 4) * 0.12).toFixed(3));
+      if (!el._full && Math.abs(o) < 1.6) {
+        el._full = true;
+        const r = this.list[i];
+        if (r.cover && r.thumb && r.cover !== r.thumb) {
+          const full = this._coverStyle(r);
+          el.querySelector(".cover").setAttribute("style", full);
+          el.querySelector(".reflect").setAttribute("style", full);
+        }
+      }
     }
     const ci = Math.round(this.pos);
     if (ci !== this._captionIdx) {
@@ -637,8 +653,94 @@ class VinylPlayerPanel extends HTMLElement {
     return true;
   }
 
-  _focusOnDeckRecord() {
-    if (this.deck.releaseId != null) this._scrollTo(this.deck.releaseId);
+  /** Tap on the turntable: needle up, stop, record goes back into its sleeve. */
+  async _putAway() {
+    const d = this.deck;
+    if (d.busy || d.releaseId == null) return;
+    const id = d.releaseId;
+    const r = this.byId?.get(id);
+    const wasPlaying = d.mode === "playing" || d.mode === "runout";
+    d.busy = true;
+    this._updateButton();
+    try {
+      if (wasPlaying) {
+        this._wantId = null;
+        this.ws("stop").catch((e) => this._toast(e.message));
+      }
+      d.mode = "loaded";
+      this.$(".arm").classList.remove("wobble");
+      this._lift(true);
+      this._updateNow();
+      if (d.arm > 0.5) {
+        await sleep(250);
+        await this._armTo(0, 900);
+      }
+      this._spin(false);
+      await sleep(Math.min(1500, (d.speed / 160) * 1000));
+      const inList = r && this._scrollTo(id);
+      if (inList) await sleep(700);
+      const item = this.items.get(this.list.findIndex((x) => x.id === id));
+      if (!item || !r) {
+        this.$(".platter .disc").classList.add("hidden");
+        this.$(".sheen").classList.remove("on");
+        await sleep(380);
+      } else {
+        await this._flyBack(r, item);
+      }
+      d.speed = d.targetSpeed = 0;
+      this._setDeckRecord(null, false);
+    } finally {
+      d.busy = false;
+      this._updateButton();
+      this._updateNow();
+    }
+  }
+
+  async _flyBack(r, item) {
+    const fx = this.$(".fx");
+    const app = this.$(".app").getBoundingClientRect();
+    const from = this._recordRect();
+    const c = item.querySelector(".cover").getBoundingClientRect();
+    const size = c.width * 0.96;
+    const left = c.left + c.width * 0.02;
+    const top = c.top + c.height * 0.02;
+    const dx = from.left + from.width / 2 - (left + size / 2);
+    const dy = from.top + from.height / 2 - (top + size / 2);
+    const s = from.width / size;
+    const out = c.width * 0.6;
+    const disc = this._makeDisc(r);
+    Object.assign(disc.style, { left: `${left - app.left}px`, top: `${top - app.top}px`, width: `${size}px`, height: `${size}px`, zIndex: "2" });
+    fx.append(disc);
+    const pd = this.$(".platter .disc");
+    pd.style.transition = "none";
+    pd.classList.add("hidden");
+    this.$(".sheen").classList.remove("on");
+    const a0 = this.deck.angle;
+    await disc.animate(
+      [
+        { transform: `translate(${dx}px,${dy}px) rotate(${a0}deg) scale(${s})` },
+        { transform: `translate(${out + (dx - out) * 0.5}px,${dy * 0.42}px) rotate(${a0 - 150}deg) scale(${((1 + s) / 2) * 1.08})`, offset: 0.45 },
+        { transform: `translate(${out}px,0) rotate(50deg) scale(1)` },
+      ],
+      { duration: 950, easing: "cubic-bezier(.45,0,.25,1)", fill: "forwards" }
+    ).finished;
+    pd.style.transition = "";
+    // the sleeve steps forward, the record slides back in behind it
+    const sleeve = document.createElement("div");
+    sleeve.className = "fx-sleeve";
+    sleeve.setAttribute("style", this._coverStyle(r));
+    Object.assign(sleeve.style, { left: `${c.left - app.left}px`, top: `${c.top - app.top}px`, width: `${c.width}px`, height: `${c.height}px`, zIndex: "3" });
+    fx.append(sleeve);
+    item.style.visibility = "hidden";
+    sleeve.animate([{ transform: "none" }, { transform: "scale(1.05)" }, { transform: "none" }], { duration: 760, easing: "ease-in-out" });
+    await disc.animate(
+      [{ transform: `translate(${out}px,0) rotate(50deg)` }, { transform: "translate(0,0) rotate(0deg)" }],
+      { duration: 650, easing: "cubic-bezier(.5,0,.3,1)", fill: "forwards" }
+    ).finished;
+    await sleep(120);
+    item.style.visibility = "";
+    disc.remove();
+    sleeve.remove();
   }
 
   /* ---------------- animation loop ---------------- */
@@ -923,6 +1025,10 @@ class VinylPlayerPanel extends HTMLElement {
     if (st !== this._lastPlayerState) {
       this._lastPlayerState = st;
       this._lift(!(this.deck.mode === "playing" && st?.state === "playing") && this.deck.mode !== "runout");
+      if (this.deck.mode === "playing" && !this.deck.busy && st) {
+        // paused → platter coasts to a stop; resumed → spins back up
+        this._spin(st.state !== "paused");
+      }
       this._updateNow();
       if (this.deck.mode === "playing") this._kick();
     }
@@ -1115,9 +1221,15 @@ class VinylPlayerPanel extends HTMLElement {
     item.style.visibility = "hidden";
 
     const out = c.width * 0.6;
+    // 0. the cover steps forward
+    await sleeve.animate(
+      [{ transform: "none" }, { transform: "translateY(-3%) scale(1.06)" }],
+      { duration: 260, easing: "cubic-bezier(.3,.7,.3,1)", fill: "forwards" }
+    ).finished;
+    disc.style.transform = "scale(1.06)";
     // 1. slide the record out of its sleeve
     await disc.animate(
-      [{ transform: "translate(0,0) rotate(0deg)" }, { transform: `translate(${out}px,0) rotate(50deg)` }],
+      [{ transform: "translate(0,-3%) rotate(0deg) scale(1.06)" }, { transform: `translate(${out}px,0) rotate(50deg)` }],
       { duration: 700, easing: "cubic-bezier(.25,.8,.25,1)", fill: "forwards" }
     ).finished;
 
@@ -1270,6 +1382,8 @@ class VinylPlayerPanel extends HTMLElement {
         <div class="row"><button class="btn primary" data-act="sync" ${i.syncing || !isAdmin ? "disabled" : ""}>${i.syncing ? "Syncing…" : "Sync now"}</button></div>
         <p class="muted">The export is written to <code>/config/vinyl_player/collection.json</code> and covers are cached in
         <code>/config/vinyl_player/covers/</code>. You can also create the export with <code>scripts/discogs_export.py</code>.</p>
+        <h3>Music Assistant matches</h3>
+        ${this._matchHTML(i.match_report)}
         <h3>Playback</h3>
         <p>Speaker: <code>${esc(i.player)}</code><br>End-of-record sound: <b>${esc(i.runout_mode)}</b></p>
         <p class="muted">Change speaker, filters and sound under Settings → Devices &amp; services → Vinyl Player → Configure.
@@ -1330,9 +1444,13 @@ class VinylPlayerPanel extends HTMLElement {
         <p class="muted">${esc([center.year, center.format, center.label].filter(Boolean).join(" · "))}</p>
         <h3>Music Assistant match</h3>
         <p class="muted">By default the album is searched by artist + title (e.g. on Apple Music). If the wrong version plays,
-        paste a Music Assistant URI (e.g. <code>apple_music://album/1441164426</code>) or a better search text.</p>
-        <div class="row"><input class="field" id="override" value="${esc(center.override || "")}" placeholder="${esc(center.title)}">
+        set <code>ma_query</code>: a better search text or a Music Assistant URI (e.g. <code>apple_music://album/1441164426</code>).
+        It is saved in <code>collection.json</code> and survives re-exports.</p>
+        <div class="row"><input class="field" id="override" value="${esc(center.override || "")}" placeholder="${esc(`${center.artist} - ${center.title}`)}">
         <button class="btn primary" data-act="override" data-id="${center.id}">Save</button></div>
+        <h3>Shelf</h3>
+        <div class="row"><button class="btn" data-act="hide" data-id="${center.id}">Hide from cover flow</button>
+        <span class="muted">sets <code>hidden: true</code> – NFC tags still work</span></div>
         <div class="row"><a class="btn" style="text-decoration:none" target="_blank" rel="noopener" href="https://www.discogs.com/release/${center.id}">Open on Discogs</a></div>`
         : `<p class="muted">No album selected.</p>`;
     }
@@ -1342,11 +1460,47 @@ class VinylPlayerPanel extends HTMLElement {
     );
   }
 
+  _matchHTML(m) {
+    m = m || {};
+    if (m.running) {
+      return `<p class="pill">Checking ${m.checked} / ${m.total} …</p>`;
+    }
+    const button = `<div class="row"><button class="btn" data-act="matches">${m.finished_at ? "Check again" : "Check all records"}</button>
+      <span class="muted">searches every album in Music Assistant and lists the misses</span></div>`;
+    if (!m.finished_at) return button;
+    const misses = m.misses || [];
+    const rows = misses
+      .map((x) => {
+        const best = x.best ? `${esc(x.best.artist)} – ${esc(x.best.name)}` : "no album found";
+        return `<tr><td>${esc(x.artist)} — <b>${esc(x.title)}</b><br><span class="muted">best guess: ${best}</span></td>
+          <td style="white-space:nowrap">${x.best?.uri ? `<button class="btn" data-act="use" data-id="${x.id}" data-uri="${esc(x.best.uri)}" title="Use the best guess as ma_query">Use</button>` : ""}
+          <button class="btn" data-act="fix" data-id="${x.id}" title="Edit ma_query">Edit</button></td></tr>`;
+      })
+      .join("");
+    return `<p>${m.total - misses.length} of ${m.total} found${misses.length ? ` · <b>${misses.length} misses</b>` : " 🎉"}
+      <span class="muted">(${new Date(m.finished_at).toLocaleString()})</span></p>
+      ${misses.length ? `<table class="tags">${rows}</table>` : ""}${button}`;
+  }
+
   async _sheetAction(act, data, root) {
     const center = this.list[Math.round(this.pos)];
     try {
       if (act === "sync") await this.ws("sync");
-      else if (act === "learn") await this.ws("learn_tag", { release_id: center.id });
+      else if (act === "matches") await this.ws("check_matches");
+      else if (act === "use") {
+        await this.ws("set_override", { release_id: Number(data.id), media_id: data.uri });
+        const r = this.byId.get(Number(data.id));
+        if (r) r.override = data.uri;
+        this._toast("Saved as ma_query");
+      } else if (act === "fix") {
+        this._scrollTo(Number(data.id));
+        this.pos = this.target;
+        this._renderFlow();
+        this._sheetTab = "album";
+      } else if (act === "hide") {
+        await this.ws("set_hidden", { release_id: Number(data.id), hidden: true });
+        this._toast("Hidden – set hidden: false in collection.json to bring it back");
+      } else if (act === "learn") await this.ws("learn_tag", { release_id: center.id });
       else if (act === "learn-cancel") await this.ws("learn_tag", { release_id: null });
       else if (act === "add") {
         const tag = root.querySelector("#tagid").value.trim();
@@ -1389,4 +1543,43 @@ class VinylPlayerPanel extends HTMLElement {
   }
 }
 
+/**
+ * The same experience as a Lovelace card, e.g. for a dashboard tab on a wall
+ * tablet. Best in a view of type "panel":
+ *
+ *   views:
+ *     - title: Vinyl
+ *       type: panel
+ *       cards:
+ *         - type: custom:vinyl-player-card
+ *           # height: 700px   # optional, default: fill the view
+ *           # header: false   # hide search / sort / settings
+ */
+class VinylPlayerCard extends VinylPlayerPanel {
+  setConfig(config) {
+    this._config = config || {};
+    this.setAttribute("card", "");
+    this.style.setProperty("--vp-card-height", this._config.height || "calc(100vh - var(--header-height, 56px))");
+    this.toggleAttribute("noheader", this._config.header === false);
+  }
+  getCardSize() {
+    return 12;
+  }
+  getGridOptions() {
+    return { columns: "full", rows: 12, min_rows: 8 };
+  }
+  static getStubConfig() {
+    return {};
+  }
+}
+
 if (!customElements.get("vinyl-player-panel")) customElements.define("vinyl-player-panel", VinylPlayerPanel);
+if (!customElements.get("vinyl-player-card")) {
+  customElements.define("vinyl-player-card", VinylPlayerCard);
+  window.customCards = window.customCards || [];
+  window.customCards.push({
+    type: "vinyl-player-card",
+    name: "Vinyl Player",
+    description: "Cover flow of your Discogs records with an animated turntable (Music Assistant).",
+  });
+}

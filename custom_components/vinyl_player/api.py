@@ -88,20 +88,22 @@ class DiscogsClient:
     async def download_covers(
         self, releases: list[dict[str, Any]], covers_dir: Path, rel_prefix: str
     ) -> int:
-        """Download missing covers; sets ``cover_file`` on each release. Returns #new."""
+        """Download missing covers + thumbnails.
+
+        Sets ``cover_file`` (full size, used for the centre cover and the record
+        label) and ``thumb_file`` (small, used for the side covers). Returns the
+        number of newly downloaded files.
+        """
         semaphore = asyncio.Semaphore(4)
         downloaded = 0
+        thumbs_dir = covers_dir / "thumbs"
 
-        async def fetch(release: dict[str, Any]) -> None:
+        async def fetch(url: str | None, target: Path) -> bool:
             nonlocal downloaded
-            url = release.get("cover_url")
             if not url or url.endswith("spacer.gif"):
-                return
-            name = discogs.cover_filename(release["id"], url)
-            target = covers_dir / name
+                return False
             if await asyncio.to_thread(target.exists):
-                release["cover_file"] = f"{rel_prefix}/{name}"
-                return
+                return True
             async with semaphore:
                 try:
                     async with self._session.get(
@@ -109,18 +111,26 @@ class DiscogsClient:
                     ) as resp:
                         if resp.status != 200:
                             _LOGGER.debug("Cover %s: HTTP %s", url, resp.status)
-                            return
+                            return False
                         payload = await resp.read()
                 except (TimeoutError, aiohttp.ClientError) as err:
                     _LOGGER.debug("Cover %s failed: %s", url, err)
-                    return
+                    return False
                 await asyncio.to_thread(_write_atomic, target, payload)
-                release["cover_file"] = f"{rel_prefix}/{name}"
                 downloaded += 1
                 await asyncio.sleep(0.2)
+                return True
 
-        await asyncio.to_thread(covers_dir.mkdir, parents=True, exist_ok=True)
-        await asyncio.gather(*(fetch(r) for r in releases))
+        async def one(release: dict[str, Any]) -> None:
+            name = discogs.cover_filename(release["id"], release.get("cover_url"))
+            if await fetch(release.get("cover_url"), covers_dir / name):
+                release["cover_file"] = f"{rel_prefix}/{name}"
+            tname = discogs.cover_filename(release["id"], release.get("thumb_url"))
+            if await fetch(release.get("thumb_url"), thumbs_dir / tname):
+                release["thumb_file"] = f"{rel_prefix}/thumbs/{tname}"
+
+        await asyncio.to_thread(thumbs_dir.mkdir, parents=True, exist_ok=True)
+        await asyncio.gather(*(one(r) for r in releases))
         return downloaded
 
 

@@ -90,3 +90,19 @@ def test_parse_tracklist():
     assert [t["title"] for t in tracks] == ["Come Together", "Golden Slumbers", "Carry That Weight"]
     assert tracks[0]["duration"] == 260 and tracks[2]["duration"] is None
     assert discogs.side_of("B5a") == "B"
+
+
+def test_merge_user_fields_and_tags():
+    new = discogs.build_releases([item(1, "Abbey Road", [{"name": "The Beatles"}])])
+    old = [{"id": 1, "ma_query": "Beatles - Abbey Road (Remastered)", "tag_id": ["x", "y"], "hidden": True}]
+    discogs.merge_user_fields(new, old)
+    assert new[0]["ma_query"].endswith("(Remastered)") and new[0]["hidden"] is True
+    assert discogs.tag_ids(new[0]) == ["x", "y"]
+    assert discogs.tag_ids({"tag_id": " a1b2 "}) == ["a1b2"]
+
+
+def test_album_matches():
+    rec = {"title": "The Dark Side Of The Moon", "artist": "Pink Floyd", "artists": ["Pink Floyd"]}
+    assert discogs.album_matches(rec, {"name": "The Dark Side of the Moon (2011 Remaster)", "artists": [{"name": "Pink Floyd"}]})
+    assert not discogs.album_matches(rec, {"name": "The Wall", "artists": [{"name": "Pink Floyd"}]})
+    assert not discogs.album_matches(rec, {"name": "The Dark Side Of The Moon", "artists": [{"name": "Tribute Band"}]})

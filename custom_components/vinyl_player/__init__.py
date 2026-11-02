@@ -46,6 +46,8 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     await hass.http.async_register_static_paths(
         [StaticPathConfig(STATIC_URL, str(FRONTEND_DIR), cache_headers=False)]
     )
+    # Load the module on every dashboard too, so `custom:vinyl-player-card` works.
+    frontend.add_extra_js_url(hass, f"{STATIC_URL}/vinyl-player-panel.js?v={VERSION}")
     async_register_websocket(hass)
     _register_services(hass)
     return True
@@ -181,10 +183,18 @@ def _register_services(hass: HomeAssistant) -> None:
             await task
 
     async def link_tag(call: ServiceCall) -> None:
-        get_manager(hass).async_set_tag(
+        await get_manager(hass).async_set_tag(
             call.data["tag_id"], call.data.get("release_id"), call.data.get("name")
         )
 
+    async def check_matches(call: ServiceCall) -> ServiceResponse:
+        task = get_manager(hass).start_match_check()
+        report = await task if task else {}
+        return {"checked": report.get("checked", 0), "misses": report.get("misses", [])}
+
+    hass.services.async_register(
+        DOMAIN, "check_matches", check_matches, supports_response=SupportsResponse.OPTIONAL
+    )
     hass.services.async_register(
         DOMAIN,
         "play",

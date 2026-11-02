@@ -56,6 +56,8 @@ def async_register_websocket(hass: HomeAssistant) -> None:
         ws_set_tag,
         ws_learn,
         ws_set_override,
+        ws_set_hidden,
+        ws_check_matches,
     ):
         websocket_api.async_register_command(hass, command)
 
@@ -81,6 +83,7 @@ def _info(hass: HomeAssistant) -> dict[str, Any]:
         "sync_error": manager.sync_error,
         "last_sync": manager.export_meta.get("generated_at"),
         "count": len(manager.releases),
+        "match_report": manager.match_report,
         "state": manager.state_payload(),
     }
 
@@ -207,7 +210,7 @@ async def ws_sync(hass, connection, msg):
 @websocket_api.async_response
 @_wrap
 async def ws_set_tag(hass, connection, msg):
-    _manager(hass).async_set_tag(msg["tag_id"], msg.get("release_id"), msg.get("name"))
+    await _manager(hass).async_set_tag(msg["tag_id"], msg.get("release_id"), msg.get("name"))
     connection.send_result(msg["id"])
 
 
@@ -238,5 +241,28 @@ async def ws_learn(hass, connection, msg):
 @websocket_api.async_response
 @_wrap
 async def ws_set_override(hass, connection, msg):
-    _manager(hass).async_set_override(msg["release_id"], msg.get("media_id"))
+    await _manager(hass).async_set_override(msg["release_id"], msg.get("media_id"))
+    connection.send_result(msg["id"])
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/set_hidden",
+        vol.Required("release_id"): vol.Coerce(int),
+        vol.Required("hidden"): bool,
+    }
+)
+@websocket_api.async_response
+@_wrap
+async def ws_set_hidden(hass, connection, msg):
+    await _manager(hass).async_set_hidden(msg["release_id"], msg["hidden"])
+    connection.send_result(msg["id"])
+
+
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/check_matches"})
+@websocket_api.async_response
+@_wrap
+async def ws_check_matches(hass, connection, msg):
+    """Start the Music Assistant match check; progress arrives via subscribe."""
+    _manager(hass).start_match_check()
     connection.send_result(msg["id"])

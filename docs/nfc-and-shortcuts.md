@@ -1,6 +1,6 @@
 # NFC tags & the Apple Shortcut
 
-Put an NFC sticker on (or inside) each record sleeve. When you touch it with your iPhone, the record
+Put an NFC sticker (NTAG213/215) on each record's sleeve. When you touch it with your iPhone, the record
 starts playing and every open Vinyl Player panel animates it onto the turntable.
 
 There are two ways to set this up. Both use the same **list of tag → album links**, which you
@@ -17,6 +17,40 @@ Option A is less work. Option B is useful when your tags are already in use, or 
 Shortcut to also open the panel.
 
 ---
+
+## ESP32 reader next to the turntable
+
+The integration listens for HA's `tag_scanned` event, so any reader that sends it works. This is an
+ESP32 with a **PN532** module over I²C (more reliable than the RC522) running ESPHome:
+
+```yaml
+esphome:
+  name: vinyl-nfc
+
+esp32:
+  board: esp32dev
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+api:
+logger:
+
+i2c:
+  sda: GPIO21
+  scl: GPIO22
+  scan: true
+
+pn532_i2c:
+  update_interval: 500ms
+  on_tag:
+    then:
+      - homeassistant.tag_scanned: !lambda 'return x;'
+```
+
+To pair a record: in the panel, swipe to it, then ⚙ → *NFC tags* → **Scan tag to link**, and lay the
+record on the reader. The tag's UID is stored as that record's `tag_id`.
 
 ## Option A: Home Assistant Companion app tags (recommended)
 
@@ -94,4 +128,8 @@ curl -X POST -H 'Content-Type: application/json' \
 
 * Put the sticker on the *inner* sleeve or the back cover. Metal-backed covers (rare) need on-metal tags.
 * NTAG213 stickers are cheap and plenty big. Each one only needs to store a short URL.
-* You can manage the full list in the panel. It's stored in `<config>/.storage/vinyl_player.data`.
+* Stick the tags on the outer protective sleeve rather than the cover, so they're easy to replace
+  and don't damage the artwork.
+* You can manage the full list in the panel. Each link is stored as the record's `tag_id` in
+  `<config>/vinyl_player/collection.json` (a string, or a list for several tags). You can also edit
+  it there by hand.

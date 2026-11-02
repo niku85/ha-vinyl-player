@@ -8,6 +8,7 @@ Discogs inside HA instead).
 
 Only the Python standard library is needed:
 
+    python3 scripts/discogs_export.py YOUR_NAME YOUR_TOKEN -o /config/vinyl_player
     python3 scripts/discogs_export.py --username YOUR_NAME --token YOUR_TOKEN
     DISCOGS_TOKEN=... python3 scripts/discogs_export.py -u YOUR_NAME -o /config/vinyl_player
 
@@ -81,28 +82,33 @@ def fetch_items(username: str, token: str) -> list[dict]:
 
 
 def download_covers(releases: list[dict], covers_dir: Path) -> int:
-    covers_dir.mkdir(parents=True, exist_ok=True)
+    """Cache full covers (centre cover + record label) and thumbnails (side covers)."""
+    (covers_dir / "thumbs").mkdir(parents=True, exist_ok=True)
     headers = {"User-Agent": discogs.USER_AGENT}
 
-    def one(release: dict) -> int:
-        url = release.get("cover_url")
+    def fetch(url: str | None, target: Path) -> tuple[bool, int]:
         if not url or url.endswith("spacer.gif"):
-            return 0
-        name = discogs.cover_filename(release["id"], url)
-        target = covers_dir / name
-        release["cover_file"] = f"covers/{name}"
+            return False, 0
         if target.exists():
-            return 0
+            return True, 0
         try:
             payload = _get(url, headers, binary=True, retries=2)
         except Exception as err:  # noqa: BLE001 - keep going on single failures
-            print(f"  cover {release['id']}: {err}", file=sys.stderr)
-            release["cover_file"] = None
-            return 0
+            print(f"  {target.name}: {err}", file=sys.stderr)
+            return False, 0
         tmp = target.with_suffix(target.suffix + ".part")
         tmp.write_bytes(payload)
         tmp.replace(target)
-        return 1
+        return True, 1
+
+    def one(release: dict) -> int:
+        name = discogs.cover_filename(release["id"], release.get("cover_url"))
+        ok, new = fetch(release.get("cover_url"), covers_dir / name)
+        release["cover_file"] = f"covers/{name}" if ok else None
+        tname = discogs.cover_filename(release["id"], release.get("thumb_url"))
+        ok, tnew = fetch(release.get("thumb_url"), covers_dir / "thumbs" / tname)
+        release["thumb_file"] = f"covers/thumbs/{tname}" if ok else None
+        return new + tnew
 
     with ThreadPoolExecutor(max_workers=4) as pool:
         return sum(pool.map(one, releases))
@@ -110,13 +116,19 @@ def download_covers(releases: list[dict], covers_dir: Path) -> int:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("-u", "--username", required=True, help="Discogs username")
+    parser.add_argument("user", nargs="?", help="Discogs username (same as --username)")
+    parser.add_argument("key", nargs="?", help="Personal access token (same as --token)")
+    parser.add_argument("-u", "--username", help="Discogs username")
     parser.add_argument("-t", "--token", default=os.environ.get("DISCOGS_TOKEN"),
                         help="Personal access token (or set DISCOGS_TOKEN)")
     parser.add_argument("-o", "--output", default="vinyl_player", help="Output folder (default: ./vinyl_player)")
     parser.add_argument("--all-formats", action="store_true", help="Include CDs, cassettes, files …")
     parser.add_argument("--no-covers", action="store_true", help="Skip downloading cover images")
     args = parser.parse_args()
+    args.username = args.username or args.user
+    args.token = args.key or args.token
+    if not args.username:
+        parser.error("a Discogs username is required")
     if not args.token:
         parser.error("--token or DISCOGS_TOKEN is required")
 
@@ -133,9 +145,17 @@ def main() -> None:
         new = download_covers(releases, out / "covers")
         print(f"  {new} new covers", file=sys.stderr)
 
+    target = out / "collection.json"
+    if target.exists():
+        # Keep the hand-edited fields (ma_query, tag_id, hidden) of the last export.
+        try:
+            previous = json.loads(target.read_text(encoding="utf-8")).get("releases")
+        except ValueError:
+            previous = None
+        discogs.merge_user_fields(releases, previous)
+
     export = discogs.build_export(args.username, releases)
     export["vinyl_only"] = not args.all_formats
-    target = out / "collection.json"
     tmp = target.with_suffix(".json.part")
     tmp.write_text(json.dumps(export, ensure_ascii=False, indent=1), encoding="utf-8")
     tmp.replace(target)
