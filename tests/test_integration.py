@@ -320,3 +320,23 @@ async def test_switch_speaker_moves_the_record(hass: HomeAssistant, setup) -> No
 
     with _pytest.raises(ServiceValidationError):
         await manager.async_set_player("media_player.not_ma")
+
+
+async def test_runout_sound_is_served_and_testable(hass: HomeAssistant, setup, hass_client_no_auth) -> None:
+    entry, calls = setup
+    manager = entry.runtime_data
+    client = await hass_client_no_auth()
+    resp = await client.get("/vinyl_player_static/runout.mp3")
+    assert resp.status == 200
+    assert len(await resp.read()) > 50_000  # the real 7 s sound, not an empty file
+
+    res = await manager.async_test_runout()
+    assert res["mode"] == "speaker"
+    played = [c for c in calls if c.domain == "media_player" and c.service == "play_media"]
+    assert played[-1].data["media_content_id"].endswith("/vinyl_player_static/runout.mp3")
+
+    from homeassistant.exceptions import ServiceValidationError
+
+    await manager.async_play(1)
+    with pytest.raises(ServiceValidationError):
+        await manager.async_test_runout()

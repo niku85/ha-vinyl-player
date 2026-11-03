@@ -1,3 +1,5 @@
+<p align="center"><img src="brand/icon@2x.png" width="160" alt="Vinyl Player icon"></p>
+
 # HA Vinyl Player
 
 Browse your **Discogs** record collection in Home Assistant with an Apple-style
@@ -220,6 +222,13 @@ things: was the last track within ~25 s of its end, and was it the last track of
 tracklist? If both are true, the album ran out. It then fires `vinyl_player_album_finished` and plays
 `runout.mp3`, either on the speaker (Music Assistant fetches it from HA's internal URL) or in the
 browser. If someone stops playback mid-album from another app, the session just ends quietly.
+
+## Icon
+
+`brand/icon.png` (256 px) and `brand/icon@2x.png` (512 px) are in the format of the
+[Home Assistant brands](https://github.com/home-assistant/brands) repository. Home Assistant and HACS
+take integration icons only from there, so until the icon is added there they show a placeholder for
+Vinyl Player. The sidebar entry uses `mdi:record-player`.
 
 ## Development
 

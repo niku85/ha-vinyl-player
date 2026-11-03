@@ -60,6 +60,7 @@ def async_register_websocket(hass: HomeAssistant) -> None:
         ws_check_matches,
         ws_set_player,
         ws_resume,
+        ws_test_runout,
     ):
         websocket_api.async_register_command(hass, command)
 
@@ -287,3 +288,10 @@ async def ws_set_player(hass, connection, msg):
 async def ws_resume(hass, connection, msg):
     await _manager(hass).async_resume()
     connection.send_result(msg["id"])
+
+
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/test_runout"})
+@websocket_api.async_response
+@_wrap
+async def ws_test_runout(hass, connection, msg):
+    connection.send_result(msg["id"], await _manager(hass).async_test_runout())

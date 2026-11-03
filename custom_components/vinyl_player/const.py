@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 DOMAIN = "vinyl_player"
-VERSION = "0.5.0"
+VERSION = "0.6.0"
 
 CONF_USERNAME = "username"
 CONF_TOKEN = "token"
@@ -31,7 +31,7 @@ COVERS_DIR = "covers"
 
 PANEL_URL_PATH = "vinyl-player"
 PANEL_TITLE = "Vinyl Player"
-PANEL_ICON = "mdi:album"
+PANEL_ICON = "mdi:record-player"
 PANEL_ELEMENT = "vinyl-player-panel"
 
 STATIC_URL = "/vinyl_player_static"

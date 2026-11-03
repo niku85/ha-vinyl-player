@@ -598,27 +598,54 @@ class VinylManager:
                 self.hass, self._play_runout_on_speaker(), f"{DOMAIN}_runout"
             )
 
-    async def _play_runout_on_speaker(self) -> None:
+    def runout_url(self) -> str:
+        """URL of the run-out sound as Music Assistant has to fetch it."""
         try:
             base = get_url(self.hass, prefer_external=False, allow_cloud=False)
-        except NoURLAvailableError:
-            _LOGGER.warning("No internal URL configured – cannot play the run-out sound")
-            self._finish_runout()
-            return
+        except NoURLAvailableError as err:
+            raise HomeAssistantError(
+                "Home Assistant has no internal URL, so the speaker can't fetch the sound. "
+                "Set one under Settings → System → Network → Home Assistant URL."
+            ) from err
+        return f"{base}{STATIC_URL}/{RUNOUT_SOUND_FILE}"
+
+    async def _async_play_sound_on_speaker(self) -> None:
+        """Play the run-out sound on the current speaker (raises with a reason)."""
+        url = self.runout_url()
         try:
             await self.hass.services.async_call(
                 "media_player",
                 "play_media",
-                {
-                    "entity_id": self.player,
-                    "media_content_id": f"{base}{STATIC_URL}/{RUNOUT_SOUND_FILE}",
-                    "media_content_type": "music",
-                },
+                {"entity_id": self.player, "media_content_id": url, "media_content_type": "music"},
                 blocking=True,
             )
         except HomeAssistantError as err:
+            _LOGGER.debug("media_player.play_media failed (%s), trying Music Assistant", err)
+            try:
+                await self.hass.services.async_call(
+                    MUSIC_ASSISTANT_DOMAIN,
+                    "play_media",
+                    {"entity_id": self.player, "media_id": url, "media_type": "track", "enqueue": "replace"},
+                    blocking=True,
+                )
+            except HomeAssistantError as err2:
+                raise HomeAssistantError(f"The speaker couldn't play {url}: {err2}") from err2
+
+    async def _play_runout_on_speaker(self) -> None:
+        try:
+            await self._async_play_sound_on_speaker()
+        except HomeAssistantError as err:
             _LOGGER.warning("Run-out sound failed: %s", err)
             self._finish_runout()
+
+    async def async_test_runout(self) -> dict[str, Any]:
+        """Play the end-of-record sound now (settings → Test sound)."""
+        mode = self.runout_mode
+        if mode == RUNOUT_SPEAKER:
+            if self.session.get("phase") == PHASE_PLAYING:
+                raise ServiceValidationError("Stop the record first – the test would replace it")
+            await self._async_play_sound_on_speaker()
+        return {"mode": mode, "url": f"{STATIC_URL}/{RUNOUT_SOUND_FILE}", "player": self.player}
 
     @callback
     def _finish_runout(self) -> None:

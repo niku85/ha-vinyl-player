@@ -11,5 +11,5 @@
   "issue_tracker": "https://github.com/niku85/ha-vinyl-player/issues",
   "requirements": [],
   "single_config_entry": true,
-  "version": "0.5.0"
+  "version": "0.6.0"
 }

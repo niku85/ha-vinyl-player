@@ -5,7 +5,7 @@
  * album through Music Assistant. No build step, no dependencies.
  */
 
-const VERSION = "0.5.0";
+const VERSION = "0.6.0";
 const DEG_PER_SEC = 200; // 33⅓ rpm
 const WINDOW = 7; // covers rendered on each side of the centre
 const ARM_SVG_H = 300; // tonearm SVG viewBox height
@@ -433,11 +433,21 @@ class VinylPlayerPanel extends HTMLElement {
   connectedCallback() {
     if (!this._built) this._build();
     if (this._hass) this._init();
+    this._kick();
     this._ro?.observe(this.$(".plinth"));
     this._ro?.observe(this.$(".stage"));
   }
 
   disconnectedCallback() {
+    // Leaving the panel (e.g. to Settings): finish any running animation so
+    // nothing waits forever, and re-read the real state when we come back.
+    const tw = this.deck.armTween;
+    if (tw) {
+      this.deck.arm = tw.to;
+      this.deck.armTween = null;
+      tw.resolve();
+    }
+    this._needsResync = true;
     this._ro?.disconnect();
     if (this._unsub) {
       this._unsub.then((u) => u && u()).catch(() => {});
@@ -1096,8 +1106,19 @@ class VinylPlayerPanel extends HTMLElement {
     return new Promise((resolve) => {
       const d = this.deck;
       if (d.armTween) d.armTween.resolve();
-      d.armTween = { from: d.arm, to: angle, start: performance.now(), dur: Math.max(1, dur), resolve };
+      const tw = { from: d.arm, to: angle, start: performance.now(), dur: Math.max(1, dur), resolve };
+      d.armTween = tw;
       this._kick();
+      // Safety net: iOS pauses animation frames in the background – never let
+      // a sequence hang on an arm movement that can't be drawn.
+      setTimeout(() => {
+        if (d.armTween === tw) {
+          d.arm = tw.to;
+          d.armTween = null;
+          this._renderDeck();
+          tw.resolve();
+        }
+      }, tw.dur + 400);
     });
   }
 
@@ -1289,11 +1310,14 @@ class VinylPlayerPanel extends HTMLElement {
   }
 
   _onInfo(msg) {
-    const first = !this.info;
+    // first message after opening (or re-opening) the panel: restore the deck
+    // instantly from the server state instead of animating
+    const first = !this.info || this._needsResync;
+    this._needsResync = false;
     const prevCount = this.info?.count;
     const prevSync = this.info?.last_sync;
     this.info = msg;
-    if (msg.kind === "collection" && (msg.count !== prevCount || msg.last_sync !== prevSync) && !first) {
+    if (msg.kind === "collection" && (msg.count !== prevCount || msg.last_sync !== prevSync) && this.all.length) {
       this._loadCollection().catch(() => {});
     }
     if (!this.list.length) this._renderEmpty();
@@ -1304,23 +1328,39 @@ class VinylPlayerPanel extends HTMLElement {
 
   async _syncDeck(s, first) {
     const d = this.deck;
-    if (d.busy) return;
+    if (d.busy && !first) return;
     if (first) {
       if (s.phase === "playing" || s.phase === "runout") {
         await this._waitForCollection();
-        this._setDeckRecord(s.release_id);
+        this._wantId = s.release_id; // it's already on the platter – don't animate it in again
+        if (d.releaseId !== s.release_id) this._setDeckRecord(s.release_id);
         d.mode = "playing";
         d.speed = d.targetSpeed = DEG_PER_SEC;
         d.arm = this._progressAngle() ?? this.armStart;
         this._lift(false);
         this._ensureTracks(s.release_id);
         this._kick();
-      } else if (s.last_release_id) {
+      } else {
+        // nothing playing (any more): needle up, platter at rest
         await this._waitForCollection();
-        this._setDeckRecord(s.last_release_id);
-        d.mode = "loaded";
+        this._wantId = null;
+        this.$(".arm").classList.remove("wobble");
+        d.armTween = null;
+        d.arm = 0;
+        d.speed = d.targetSpeed = 0;
+        this._lift(true);
+        const keep = s.last_release_id ?? d.releaseId;
+        if (keep != null) {
+          if (d.releaseId !== keep) this._setDeckRecord(keep);
+          d.mode = "loaded";
+        } else {
+          d.mode = "empty";
+        }
+        this._renderDeck();
       }
       this._updateButton();
+      this._updateNow();
+      this._kick();
       return;
     }
     if (s.phase === "playing" && s.release_id !== this._wantId) {
@@ -1649,7 +1689,10 @@ class VinylPlayerPanel extends HTMLElement {
         <h3>Music Assistant matches</h3>
         ${this._matchHTML(i.match_report)}
         <h3>Playback</h3>
-        <p>Speaker: <code>${esc(i.player)}</code><br>End-of-record sound: <b>${esc(i.runout_mode)}</b></p>
+        <p>Speaker: <b>${esc(this._speakerName(i.player))}</b><br>End-of-record sound: <b>${esc({ speaker: "on the speaker", browser: "in this browser", off: "off" }[i.runout_mode] || i.runout_mode)}</b></p>
+        ${i.runout_mode !== "off" ? `<div class="row"><button class="btn" data-act="test-sound">Test sound</button>
+          <span class="muted">plays the run-out groove and the arm returning</span></div>` : ""}
+        <p class="muted">The sound plays when an album runs out by itself (its last track ends) – not on Stop or pause.</p>
         <p class="muted">Change speaker, filters and sound under Settings → Devices &amp; services → Vinyl Player → Configure.
         Like real vinyl there is no skipping: shuffle and repeat are switched off and the panel only offers volume and stop.</p>
         <p class="muted">v${VERSION}</p>`;
@@ -1862,6 +1905,15 @@ class VinylPlayerPanel extends HTMLElement {
     try {
       if (act === "sync") await this.ws("sync");
       else if (act === "matches") await this.ws("check_matches");
+      else if (act === "test-sound") {
+        const res = await this.ws("test_runout");
+        if (res.mode === "browser") {
+          this._audio.src = res.url;
+          this._audio.currentTime = 0;
+          await this._audio.play();
+          this._toast("Playing in this browser");
+        } else this._toast(`Playing on ${this._speakerName(res.player)}`);
+      }
       else if (act === "use") {
         await this.ws("set_override", { release_id: Number(data.id), media_id: data.uri });
         const r = this.byId.get(Number(data.id));
