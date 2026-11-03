@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.6.3] – 2026-11-03
+
+- End-of-record sound: no more "cow". The pitched motor hum after the arm lifts is replaced by a dull lift thud, a soft noise-only "shhh" while the arm travels back and a quiet tick when it settles in its rest.
+
 ## [0.6.2] – 2026-11-03
 
 - The integration icon now shows in Home Assistant: moved to `custom_components/vinyl_player/brand/` (with dark-mode variants), where Home Assistant looks for it.

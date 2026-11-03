@@ -2,7 +2,9 @@
 """Synthesise the "end of the record" sound (stdlib only).
 
 Locked run-out groove (crackle + a thump every 1.8 s = 33⅓ rpm), the tonearm
-lifting, the auto-return mechanism whirring and the arm clicking into its rest.
+lifting with a dull thud, a soft mechanical "shhh" while it travels back, and
+the tick of the arm settling into its rest. No tonal parts – a pitched motor
+hum sounded like a cow.
 
     python3 tools/generate_runout_sound.py            # writes runout.wav (+ .mp3 if ffmpeg exists)
 """
@@ -21,7 +23,7 @@ RATE = 44100
 LENGTH = 7.4
 REV = 1.8  # seconds per revolution at 33⅓ rpm
 LIFT_AT = 4.6
-RETURN_FROM, RETURN_TO = 5.0, 6.6
+RETURN_FROM, RETURN_TO = 5.05, 6.55
 REST_AT = 6.72
 
 OUT = Path(__file__).resolve().parents[1] / "custom_components/vinyl_player/frontend"
@@ -67,30 +69,39 @@ def main() -> None:
                 add(start + k, 0.35 * rng.uniform(-1, 1) * (1 - k / (0.003 * RATE)))
         t += REV
 
-    # Arm lift: soft mechanical clunk.
-    for k in range(int(0.15 * RATE)):
-        env = math.exp(-k / (0.025 * RATE))
-        add(lift_i + k, env * (0.45 * math.sin(2 * math.pi * 120 * k / RATE) + 0.15 * rng.uniform(-1, 1)))
-
-    # Auto-return mechanism: geared motor whir with a bit of rattle.
-    a, b = int(RETURN_FROM * RATE), int(RETURN_TO * RATE)
-    phase = 0.0
+    # Arm lift: a short, dull thud (filtered noise + a very short low thump,
+    # no ringing tone).
     lp = 0.0
+    for k in range(int(0.09 * RATE)):
+        env = math.exp(-k / (0.012 * RATE))
+        lp += 0.12 * (rng.uniform(-1, 1) - lp)
+        thump = math.sin(2 * math.pi * 70 * k / RATE) * math.exp(-k / (0.008 * RATE))
+        add(lift_i + k, env * (0.9 * lp + 0.25 * thump))
+
+    # The arm travelling back: barely audible mechanical friction – band-limited
+    # noise with a smooth swell, no pitch at all (a tone here sounds like a moo).
+    a, b = int(RETURN_FROM * RATE), int(RETURN_TO * RATE)
+    lo = hi = 0.0
     for i in range(a, b):
         x = (i - a) / (b - a)
-        env = math.sin(math.pi * x) ** 0.6
-        freq = 85 + 25 * math.sin(math.pi * x)
-        phase += freq / RATE
-        saw = 2 * (phase % 1) - 1
-        lp += 0.15 * (saw - lp)
-        rattle = 0.05 * rng.uniform(-1, 1) * (1 if (i // 400) % 2 else 0.3)
-        buf[i] += env * (0.22 * lp + rattle)
+        env = math.sin(math.pi * x) ** 1.5
+        white = rng.uniform(-1, 1)
+        hi += 0.35 * (white - hi)  # take the hiss off …
+        lo += 0.04 * (hi - lo)  # … and the rumble: what's left is a soft "shhh"
+        buf[i] += env * 0.10 * (hi - lo)
 
-    # Arm drops into the rest: short high click.
+    # Arm settles into its rest: soft plastic tick (noise, quickly damped).
     rest_i = int(REST_AT * RATE)
-    for k in range(int(0.05 * RATE)):
-        env = math.exp(-k / (0.004 * RATE))
-        add(rest_i + k, env * (0.5 * math.sin(2 * math.pi * 1900 * k / RATE) + 0.2 * rng.uniform(-1, 1)))
+    lp = 0.0
+    for k in range(int(0.03 * RATE)):
+        env = math.exp(-k / (0.0025 * RATE))
+        lp += 0.5 * (rng.uniform(-1, 1) - lp)
+        add(rest_i + k, 0.55 * env * lp)
+    lp = 0.0
+    for k in range(int(0.02 * RATE)):  # tiny second bounce
+        env = math.exp(-k / (0.002 * RATE))
+        lp += 0.5 * (rng.uniform(-1, 1) - lp)
+        add(rest_i + int(0.045 * RATE) + k, 0.18 * env * lp)
 
     peak = max(abs(v) for v in buf) or 1.0
     gain = 0.8 / peak
