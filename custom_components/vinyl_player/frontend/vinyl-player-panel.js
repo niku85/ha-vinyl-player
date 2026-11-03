@@ -5,7 +5,7 @@
  * album through Music Assistant. No build step, no dependencies.
  */
 
-const VERSION = "0.6.1";
+const VERSION = "0.6.2";
 const DEG_PER_SEC = 200; // 33⅓ rpm
 const WINDOW = 7; // covers rendered on each side of the centre
 const ARM_SVG_H = 300; // tonearm SVG viewBox height

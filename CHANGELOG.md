@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.6.2] – 2026-11-03
+
+- The integration icon now shows in Home Assistant: moved to `custom_components/vinyl_player/brand/` (with dark-mode variants), where Home Assistant looks for it.
+
 ## [0.6.1] – 2026-11-03
 
 - If the page and the running integration don't match (HACS updated the files but Home Assistant wasn't restarted yet), the panel now says "Restart Home Assistant to finish the update" instead of failing with "Unknown command" (e.g. on *Test sound*).

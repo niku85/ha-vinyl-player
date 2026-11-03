@@ -1,4 +1,4 @@
-<p align="center"><img src="brand/icon@2x.png" width="160" alt="Vinyl Player icon"></p>
+<p align="center"><img src="custom_components/vinyl_player/brand/icon@2x.png" width="160" alt="Vinyl Player icon"></p>
 
 # HA Vinyl Player
 
@@ -225,10 +225,9 @@ browser. If someone stops playback mid-album from another app, the session just 
 
 ## Icon
 
-`brand/icon.png` (256 px) and `brand/icon@2x.png` (512 px) are in the format of the
-[Home Assistant brands](https://github.com/home-assistant/brands) repository. Home Assistant and HACS
-take integration icons only from there, so until the icon is added there they show a placeholder for
-Vinyl Player. The sidebar entry uses `mdi:record-player`.
+The icon is in `custom_components/vinyl_player/brand/` (`icon.png` 256 px, `icon@2x.png` 512 px, plus
+`dark_icon` variants). Home Assistant shows it for the integration from there, like the Chore Reminder.
+The sidebar entry uses `mdi:record-player`.
 
 ## Development
 
