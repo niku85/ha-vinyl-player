@@ -1,10 +1,12 @@
 name: Release
 
-# Push a tag like v0.6.0 → a GitHub release with the notes from CHANGELOG.md.
-# HACS shows that version number and offers it as an update.
+# Every push to main: if manifest.json has a version without a release yet,
+# create the tag vX.Y.Z and a GitHub release with the notes from CHANGELOG.md.
+# HACS then shows that version number and offers it as an update.
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -15,26 +17,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Tag must match manifest.json
+      - name: Version from manifest.json
+        id: v
         run: |
-          tag="${GITHUB_REF_NAME#v}"
-          manifest=$(python3 -c "import json;print(json.load(open('custom_components/vinyl_player/manifest.json'))['version'])")
-          if [ "$tag" != "$manifest" ]; then
-            echo "::error::Tag v$tag does not match manifest.json version $manifest"
-            exit 1
+          version=$(python3 -c "import json;print(json.load(open('custom_components/vinyl_player/manifest.json'))['version'])")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
+      - name: Already released?
+        id: exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${{ steps.v.outputs.tag }}" >/dev/null 2>&1; then
+            echo "Release ${{ steps.v.outputs.tag }} exists – nothing to do"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Release notes from CHANGELOG.md
+        if: steps.exists.outputs.skip != 'true'
         run: |
-          awk -v v="${GITHUB_REF_NAME#v}" '
-            $0 ~ "^## \\[?"v"\\]?" { on = 1; next }
+          awk -v v="${{ steps.v.outputs.version }}" '
+            index($0, "## [" v "]") == 1 || index($0, "## " v) == 1 { on = 1; next }
             on && /^## / { exit }
             on { print }
           ' CHANGELOG.md > notes.md
           if [ ! -s notes.md ]; then echo "See CHANGELOG.md" > notes.md; fi
           cat notes.md
 
-      - name: Create release
+      - name: Create tag and release
+        if: steps.exists.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md --verify-tag
+        run: |
+          gh release create "${{ steps.v.outputs.tag }}" --target "$GITHUB_SHA" \
+            --title "${{ steps.v.outputs.tag }}" --notes-file notes.md
