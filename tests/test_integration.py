@@ -340,3 +340,24 @@ async def test_runout_sound_is_served_and_testable(hass: HomeAssistant, setup, h
     await manager.async_play(1)
     with pytest.raises(ServiceValidationError):
         await manager.async_test_runout()
+
+
+async def test_panel_commands_are_registered(hass: HomeAssistant, setup, hass_ws_client) -> None:
+    """Every websocket command the panel uses must exist (no 'Unknown command')."""
+    import re
+    from pathlib import Path
+
+    js = Path(__file__).parents[1] / "custom_components/vinyl_player/frontend/vinyl-player-panel.js"
+    used = set(re.findall(r'this\.ws\("([a-z_]+)"', js.read_text(encoding="utf-8")))
+    assert {"test_runout", "set_player", "resume", "play", "stop"} <= used
+    from homeassistant.components.websocket_api import const as ws_const
+
+    registered = hass.data[ws_const.DOMAIN]
+    missing = [c for c in used if f"vinyl_player/{c}" not in registered]
+    assert not missing, missing
+
+    ws = await hass_ws_client(hass)
+    await ws.send_json({"id": 1, "type": "vinyl_player/test_runout"})
+    msg = await ws.receive_json()
+    assert msg["success"], msg
+    assert msg["result"]["url"].endswith("runout.mp3")

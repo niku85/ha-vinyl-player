@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.6.1] – 2026-11-03
+
+- If the page and the running integration don't match (HACS updated the files but Home Assistant wasn't restarted yet), the panel now says "Restart Home Assistant to finish the update" instead of failing with "Unknown command" (e.g. on *Test sound*).
+- Test that every command the panel uses is registered in the backend.
+
 ## [0.6.0] – 2026-11-03
 
 First tagged release – everything built so far.

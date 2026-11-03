@@ -5,7 +5,7 @@
  * album through Music Assistant. No build step, no dependencies.
  */
 
-const VERSION = "0.6.0";
+const VERSION = "0.6.1";
 const DEG_PER_SEC = 200; // 33⅓ rpm
 const WINDOW = 7; // covers rendered on each side of the centre
 const ARM_SVG_H = 300; // tonearm SVG viewBox height
@@ -243,6 +243,10 @@ select.sort option { color: #000; }
 .tags .mini { width: 34px; height: 34px; border-radius: 2px; background: #333 center / cover; display: inline-block; vertical-align: middle; margin-right: 8px; }
 .muted { color: var(--vp-dim); }
 .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; background: rgba(224,160,74,.16); color: var(--vp-accent); font-size: 12px; }
+.update-hint { display: none; position: absolute; left: 12px; right: 12px; top: 12px; z-index: 45; padding: 12px 16px; border-radius: 12px;
+  background: #3a2a12; color: #ffe2b8; border: 1px solid rgba(255,170,60,.35); font-size: 13px; line-height: 1.4; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+.update-hint.show { display: block; }
+:host([look="frame"]) .update-hint { background: var(--frame-orange-bg, #F8E3CB); color: var(--vp-ink); border: 0; box-shadow: none; }
 .toast { position: absolute; left: 50%; bottom: 24px; transform: translate(-50%, 30px); opacity: 0; transition: .3s; z-index: 40;
   background: #2b2a31; border: 1px solid var(--vp-line); padding: 10px 16px; border-radius: 10px; max-width: calc(100% - 32px); box-shadow: 0 10px 30px rgba(0,0,0,.5); }
 .toast.show { transform: translate(-50%, 0); opacity: 1; }
@@ -478,7 +482,23 @@ class VinylPlayerPanel extends HTMLElement {
   }
 
   ws(type, data = {}) {
-    return this._hass.callWS({ type: `vinyl_player/${type}`, ...data });
+    return this._hass.callWS({ type: `vinyl_player/${type}`, ...data }).catch((err) => {
+      // New page, old backend: HACS updated the files but HA wasn't restarted.
+      if (err?.code === "unknown_command") {
+        this._showRestartHint();
+        throw new Error("Restart Home Assistant to finish the Vinyl Player update");
+      }
+      throw err;
+    });
+  }
+
+  _showRestartHint(backend) {
+    const el = this.$(".update-hint");
+    if (!el) return;
+    el.innerHTML = `<b>Restart Home Assistant to finish the update.</b> This page is v${VERSION}${
+      backend ? `, the running integration is still v${esc(backend)}` : ", the running integration is older"
+    }. Settings → ⋮ → Restart Home Assistant (reloading the integration is not enough).`;
+    el.classList.add("show");
   }
 
   async _init() {
@@ -565,6 +585,7 @@ class VinylPlayerPanel extends HTMLElement {
           </div>
         </div>
         <div class="toast"></div>
+        <div class="update-hint" role="status"></div>
       </div>`;
 
     this._menu = this.$("ha-menu-button");
@@ -1310,6 +1331,7 @@ class VinylPlayerPanel extends HTMLElement {
   }
 
   _onInfo(msg) {
+    if (msg.version && msg.version !== VERSION) this._showRestartHint(msg.version);
     // first message after opening (or re-opening) the panel: restore the deck
     // instantly from the server state instead of animating
     const first = !this.info || this._needsResync;
